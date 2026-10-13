@@ -1,0 +1,51 @@
+/* ============================================
+   自定义美化：毛玻璃半透明卡片
+   --------------------------------------------
+   想调整透明度，改下面 rgba 里最后一个数字即可：
+   0 = 完全透明，1 = 完全不透明（当前 0.62）
+   ============================================ */
+
+/* 浅色模式：卡片背景改成半透明白色 */
+:root {
+  --card-bg: rgba(255, 255, 255, 0.62);
+}
+
+/* 深色模式：卡片背景改成半透明深色 */
+[data-theme='dark'] {
+  --card-bg: rgba(18, 18, 18, 0.62);
+}
+
+/* 给主要卡片加上毛玻璃（模糊 + 提升饱和度）效果 */
+#page,
+#post,
+#archive,
+#tag,
+#category,
+#aside-content .card-widget,
+#recent-posts .recent-post-item,
+.pagination {
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+}
+
+/* ============================================
+   背景：蓝色毛玻璃底（柔和蓝色渐变 + 一点光感）
+   ============================================ */
+
+/* 页面底色：蓝色毛玻璃 */
+body {
+  background:
+    radial-gradient(ellipse at 18% 10%, rgba(255, 255, 255, 0.5), transparent 50%),
+    radial-gradient(ellipse at 85% 85%, rgba(90, 152, 222, 0.4), transparent 55%),
+    linear-gradient(155deg, #eaf3fc 0%, #d2e6f8 45%, #a3c8ec 100%);
+  background-attachment: fixed;
+}
+
+/* 深色模式下，底色换成深蓝 */
+[data-theme='dark'] body {
+  background:
+    radial-gradient(ellipse at 20% 15%, rgba(45, 65, 95, 0.5), transparent 55%),
+    linear-gradient(135deg, #0d1b2a 0%, #15283b 55%, #0e2030 100%);
+  background-attachment: fixed;
+}
+
