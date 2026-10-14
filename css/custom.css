@@ -37,11 +37,12 @@
    背景：蓝色毛玻璃底（柔和蓝色渐变 + 一点光感）
    ============================================ */
 
-/* 页面底色：蓝色毛玻璃（柔和、上下统一，不突兀） */
+/* 页面底色：蓝色毛玻璃 */
 body {
   background:
-    radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.55), transparent 55%),
-    linear-gradient(180deg, #eef4fb 0%, #e2edf9 100%);
+    radial-gradient(ellipse at 18% 10%, rgba(255, 255, 255, 0.5), transparent 50%),
+    radial-gradient(ellipse at 85% 85%, rgba(90, 152, 222, 0.4), transparent 55%),
+    linear-gradient(155deg, #eaf3fc 0%, #d2e6f8 45%, #a3c8ec 100%);
   background-attachment: fixed;
 }
 
@@ -52,4 +53,3 @@ body {
     linear-gradient(135deg, #0d1b2a 0%, #15283b 55%, #0e2030 100%);
   background-attachment: fixed;
 }
-
