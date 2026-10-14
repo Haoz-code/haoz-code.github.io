@@ -53,3 +53,25 @@ body {
     linear-gradient(135deg, #0d1b2a 0%, #15283b 55%, #0e2030 100%);
   background-attachment: fixed;
 }
+
+/* ============================================
+   页脚：深蓝渐变底（下深上浅）
+   --------------------------------------------
+   to top = 从下往上渐变：
+     最下面深藏青 → 中间过渡 → 最上面亮蓝
+   【想调深浅】改下面 4 个色值（顺序 = 从底到顶）
+   【想改成上深下浅】把 to top 改成 to bottom
+   ============================================ */
+#footer {
+  background: linear-gradient(
+    to top,
+    #071a30 0%,
+    #0d3573 35%,
+    #1d4ed8 72%,
+    #3b82f6 100%
+  );
+  background-attachment: scroll;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+}
