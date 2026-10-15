@@ -1,0 +1,581 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Hello-Agents 第一章学习笔记：亲手拆开一个 Agent 的运转闭环 | Haoz 的博客</title><meta name="author" content="Haoz-code"><meta name="copyright" content="Haoz-code"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="ffffff"><meta name="description" content="学完 Datawhale《Hello-Agents》第一章，逐行拆解&quot;查天气+推景点&quot;的旅行助手，重点记录 Agent 循环里&quot;历史到底怎么传&quot;的问题。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Hello-Agents 第一章学习笔记：亲手拆开一个 Agent 的运转闭环">
+<meta property="og:url" content="https://haoz-code.github.io/2026/10/15/hello-agents-chapter1-notes/index.html">
+<meta property="og:site_name" content="Haoz 的博客">
+<meta property="og:description" content="学完 Datawhale《Hello-Agents》第一章，逐行拆解&quot;查天气+推景点&quot;的旅行助手，重点记录 Agent 循环里&quot;历史到底怎么传&quot;的问题。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://avatars.githubusercontent.com/u/180089599?v=4">
+<meta property="article:published_time" content="2026-10-15T11:50:00.000Z">
+<meta property="article:modified_time" content="2026-10-15T12:01:14.467Z">
+<meta property="article:author" content="Haoz-code">
+<meta property="article:tag" content="Agent">
+<meta property="article:tag" content="Datawhale">
+<meta property="article:tag" content="大模型">
+<meta property="article:tag" content="学习笔记">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://avatars.githubusercontent.com/u/180089599?v=4"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Hello-Agents 第一章学习笔记：亲手拆开一个 Agent 的运转闭环",
+  "url": "https://haoz-code.github.io/2026/10/15/hello-agents-chapter1-notes/",
+  "image": "https://avatars.githubusercontent.com/u/180089599?v=4",
+  "datePublished": "2026-10-15T11:50:00.000Z",
+  "dateModified": "2026-10-15T12:01:14.467Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Haoz-code",
+      "url": "https://github.com/Haoz-code"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://haoz-code.github.io/2026/10/15/hello-agents-chapter1-notes/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.7.1.260810"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        try {
+          const data = { value }
+
+          if (ttl != null) {
+            data.expiry = Date.now() + ttl * 86400000
+          }
+
+          localStorage.setItem(key, JSON.stringify(data))
+        } catch (e) {
+          console.error(e)
+        }
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', 'ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.json","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Hello-Agents 第一章学习笔记：亲手拆开一个 Agent 的运转闭环',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css?v=6"><meta name="generator" content="Hexo 8.1.2"></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="https://avatars.githubusercontent.com/u/180089599?v=4" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">3</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">6</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Haoz 的博客</span></a><a class="nav-page-title" href="/"><span class="site-name">Hello-Agents 第一章学习笔记：亲手拆开一个 Agent 的运转闭环</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">Hello-Agents 第一章学习笔记：亲手拆开一个 Agent 的运转闭环</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-10-15T11:50:00.000Z" title="发表于 2026-10-15 19:50:00">2026-10-15</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-10-15T12:01:14.467Z" title="更新于 2026-10-15 20:01:14">2026-10-15</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">4645</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>19 分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><blockquote>
+<p>学完 Datawhale《Hello-Agents》第一章后，我把那个”查天气 + 推景点”的旅行助手逐行拆了一遍，并实测验证了几个容易想当然的地方。这篇记录我真正卡住过的点，尤其是 Agent 循环里那个”历史到底怎么传”的问题。</p>
+</blockquote>
+<span id="more"></span>
+
+<hr>
+<h2 id="一、这一章在讲什么"><a href="#一、这一章在讲什么" class="headerlink" title="一、这一章在讲什么"></a>一、这一章在讲什么</h2><p>第一章没有一上来讲理论，而是直接给你一个能跑的小 Agent：你问”北京今天去哪玩”，它自己决定先查天气、再搜景点，最后给出回答。</p>
+<p>代码只有两百来行，但把 Agent 的四个基本部件都覆盖了：</p>
+<table>
+<thead>
+<tr>
+<th>部件</th>
+<th>代码</th>
+<th>职责</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>工具（数据获取）</td>
+<td><code>get_weather(city)</code></td>
+<td>调天气 API，拿实时天气和气温</td>
+</tr>
+<tr>
+<td>工具（联网搜索）</td>
+<td><code>get_attraction(city, weather)</code></td>
+<td>用 Tavily 搜索，按”城市+天气”推景点</td>
+</tr>
+<tr>
+<td>模型封装</td>
+<td><code>OpenAICompatibleClient</code></td>
+<td>封装大模型调用，可换任意 OpenAI 兼容服务</td>
+</tr>
+<tr>
+<td>调度循环</td>
+<td><code>for</code> 循环 + 正则解析</td>
+<td>让模型自己决定下一步调哪个工具，直到 <code>Finish[...]</code></td>
+</tr>
+</tbody></table>
+<p>这四块组合起来，就是”能联网、能调工具、能自己决定下一步”的智能体雏形。</p>
+<hr>
+<h2 id="二、动手之前：环境踩坑实录"><a href="#二、动手之前：环境踩坑实录" class="headerlink" title="二、动手之前：环境踩坑实录"></a>二、动手之前：环境踩坑实录</h2><p>这两步和 Agent 原理无关，但不解决就跑不起来，先记下来。</p>
+<p><strong>坑 1：终端里 <code>conda</code> 命令找不到。</strong> Anaconda 装在自定义路径（<code>D:\Tool\Anaconda</code>）时，安装程序常常没把它加进 PATH，于是 VSCode 终端里敲 <code>conda</code> 直接报 <code>CommandNotFoundException</code>。解决方法是把三个目录追加进用户 PATH：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">D:\Tool\Anaconda</span><br><span class="line">D:\Tool\Anaconda\Scripts</span><br><span class="line">D:\Tool\Anaconda\condabin</span><br></pre></td></tr></table></figure>
+
+<p>再执行 <code>conda init powershell</code> 写入 PowerShell profile（<code>conda activate</code> 依赖它）。<strong>改完必须完全重启 VSCode</strong>——VSCode 启动时会把当时的 PATH 拍个快照，新开的终端继承的是这个快照，不重启不生效。</p>
+<p><strong>坑 2：调用大模型时报 <code>TypeError: process() takes no keyword arguments</code>。</strong> 这个报错信息完全看不出问题在哪，实际是 Anaconda 自带的 <code>brotli</code> 版本太老（1.0.9），缺少新版 <code>httpx</code> 需要的 <code>output_buffer_limit</code> 参数。升级即可：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">pip install --user --upgrade brotli</span><br></pre></td></tr></table></figure>
+
+<p>顺带一提，如果 Anaconda 目录没有写权限（Windows 上很常见），<code>pip install</code> 会<strong>静默地</strong>把包装到用户级目录 <code>%APPDATA%\Python\Python312\site-packages</code>，而不是 Anaconda 的 <code>Lib\site-packages</code>。功能上没问题，但排查”到底装哪了”时容易被绕进去。</p>
+<p><strong>配置密钥</strong>：把 API Key 写进代码是大忌。这一章用 <code>.env</code> 文件加 <code>python-dotenv</code> 管理：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> pathlib <span class="keyword">import</span> Path</span><br><span class="line"><span class="keyword">from</span> dotenv <span class="keyword">import</span> load_dotenv</span><br><span class="line"></span><br><span class="line">load_dotenv(Path(__file__).with_name(<span class="string">&quot;.env&quot;</span>))</span><br><span class="line">API_KEY = os.environ[<span class="string">&quot;LLM_API_KEY&quot;</span>]</span><br></pre></td></tr></table></figure>
+
+<p>用 <code>Path(__file__)</code> 定位而不是默认的相对路径，这样在哪个目录运行都能找到 <code>.env</code>。记得把 <code>.env</code> 加进 <code>.gitignore</code>。</p>
+<hr>
+<h2 id="三、工具一：get-weather-——-调-API-拿数据"><a href="#三、工具一：get-weather-——-调-API-拿数据" class="headerlink" title="三、工具一：get_weather —— 调 API 拿数据"></a>三、工具一：<code>get_weather</code> —— 调 API 拿数据</h2><h3 id="3-1-current-condition-到底是什么"><a href="#3-1-current-condition-到底是什么" class="headerlink" title="3.1 current_condition 到底是什么"></a>3.1 <code>current_condition</code> 到底是什么</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">data = response.json()</span><br><span class="line">data[<span class="string">&#x27;current_condition&#x27;</span>][<span class="number">0</span>]</span><br></pre></td></tr></table></figure>
+
+<p><code>current_condition</code> <strong>不是 Python 内置变量，也不是写死的魔法值</strong>，而是天气接口返回的 JSON 里约定的一个字段名。</p>
+<p>流程是：</p>
+<ol>
+<li><code>requests.get(url)</code> 发 HTTP 请求</li>
+<li>服务器返回一段 JSON 字符串</li>
+<li><code>response.json()</code> 把 JSON 字符串<strong>转成 Python 字典</strong></li>
+<li><code>data[&#39;current_condition&#39;]</code> 读字典里对应 key 的值</li>
+</ol>
+<p>wttr.in 返回的结构简化后长这样：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;current_condition&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span></span><br><span class="line">    <span class="punctuation">&#123;</span> <span class="attr">&quot;weatherDesc&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span><span class="punctuation">&#123;</span><span class="attr">&quot;value&quot;</span><span class="punctuation">:</span> <span class="string">&quot;Haze&quot;</span><span class="punctuation">&#125;</span><span class="punctuation">]</span><span class="punctuation">,</span> <span class="attr">&quot;temp_C&quot;</span><span class="punctuation">:</span> <span class="string">&quot;26&quot;</span> <span class="punctuation">&#125;</span></span><br><span class="line">  <span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;nearest_area&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span>...<span class="punctuation">]</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;weather&quot;</span><span class="punctuation">:</span> <span class="punctuation">[</span>...<span class="punctuation">]</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>两个要点：</p>
+<ul>
+<li><strong>字段名必须和接口完全一致</strong>，大小写也一样，写错了就是 <code>KeyError</code>。</li>
+<li><code>current_condition</code> 对应的值是<strong>列表</strong>，所以要加 <code>[0]</code> 取第一条。为什么用数组？很多天气 API 会预留”多地点&#x2F;多时段”的扩展，实际绝大多数情况只有一条数据。</li>
+</ul>
+<p>想看真实结构，把原始返回打出来最快：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">print</span>(response.text)    <span class="comment"># 接口返回的原始字符串</span></span><br><span class="line"><span class="built_in">print</span>(data.keys())      <span class="comment"># 转换后字典的顶层 key</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="3-2-两个-except-的分工"><a href="#3-2-两个-except-的分工" class="headerlink" title="3.2 两个 except 的分工"></a>3.2 两个 <code>except</code> 的分工</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    response = requests.get(url)</span><br><span class="line">    response.raise_for_status()</span><br><span class="line">    data = response.json()</span><br><span class="line">    current_condition = data[<span class="string">&#x27;current_condition&#x27;</span>][<span class="number">0</span>]</span><br><span class="line">    ...</span><br><span class="line"><span class="keyword">except</span> requests.exceptions.RequestException <span class="keyword">as</span> e:</span><br><span class="line">    <span class="keyword">return</span> <span class="string">f&quot;错误：查询天气时遇到网络问题 - <span class="subst">&#123;e&#125;</span>&quot;</span></span><br><span class="line"><span class="keyword">except</span> (KeyError, IndexError) <span class="keyword">as</span> e:</span><br><span class="line">    <span class="keyword">return</span> <span class="string">f&quot;错误：解析天气数据失败，可能是城市名称无效 - <span class="subst">&#123;e&#125;</span>&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>拆开看：</p>
+<ul>
+<li><code>requests.exceptions.RequestException</code>：<strong>网络层面失败</strong>——请求根本没拿到正常响应（断网、超时、404&#x2F;500、返回的不是合法 JSON）。</li>
+<li><code>(KeyError, IndexError)</code>：<strong>请求成功了、JSON 也解析出来了，但数据结构不符合预期</strong>。<ul>
+<li><code>KeyError</code>：字典里没这个 key</li>
+<li><code>IndexError</code>：列表是空的，<code>[0]</code> 越界</li>
+</ul>
+</li>
+</ul>
+<h3 id="3-3-⚠️-一个想当然的坑（实测纠正）"><a href="#3-3-⚠️-一个想当然的坑（实测纠正）" class="headerlink" title="3.3 ⚠️ 一个想当然的坑（实测纠正）"></a>3.3 ⚠️ 一个想当然的坑（实测纠正）</h3><p>看到第二个 <code>except</code> 里写着”可能是城市名称无效”，很容易顺理成章地推断：</p>
+<blockquote>
+<p>城市名写错时，API 会返回 200，但 JSON 里没有 <code>current_condition</code>，于是抛 <code>KeyError</code>。</p>
+</blockquote>
+<p><strong>我实测后发现这个推断不成立。</strong> 传一个不存在的城市给 wttr.in，实际行为是：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">输入: zzzznotacity</span><br><span class="line">HTTP 状态码: 500</span><br><span class="line">Content-Type: text/plain</span><br><span class="line">返回体: &#x27;location not found: location not found&#x27;</span><br></pre></td></tr></table></figure>
+
+<p>也就是说：</p>
+<ol>
+<li>状态码是 <strong>500，不是 200</strong>，<code>raise_for_status()</code> <strong>会</strong>报错</li>
+<li>返回体是 <code>text/plain</code> 的纯文本，<strong>根本不是合法 JSON</strong></li>
+</ol>
+<p>所以城市名写错时，实际走的是<strong>第一个分支</strong>（<code>RequestException</code>），而不是第二个。<code>(KeyError, IndexError)</code> 在这个 API 上几乎不会触发——它更像一段<strong>防御性代码</strong>，防止未来接口行为变化。</p>
+<p>更值得警惕的是这带来的<strong>误导</strong>：用户把城市名打错，本来是个输入错误，却被报成”查询天气时遇到网络问题”。异常分支的提示文案是程序员写的<strong>业务猜测</strong>，不是程序自动判断出来的——这句话是这段代码最该记住的地方。</p>
+<p>（补充一个细节：<code>requests.exceptions.JSONDecodeError</code> 确实是 <code>RequestException</code> 的子类，继承链是 <code>JSONDecodeError → InvalidJSONError → RequestException</code>。所以上面的 <code>text/plain</code> 返回体就算不 <code>raise_for_status</code>，走到 <code>response.json()</code> 也会抛 <code>JSONDecodeError</code> 并被第一个分支捕获，结论一样。）</p>
+<hr>
+<h2 id="四、工具二：get-attraction-——-Tavily-联网搜索"><a href="#四、工具二：get-attraction-——-Tavily-联网搜索" class="headerlink" title="四、工具二：get_attraction —— Tavily 联网搜索"></a>四、工具二：<code>get_attraction</code> —— Tavily 联网搜索</h2><h3 id="4-1-为什么要专门配一个搜索-API"><a href="#4-1-为什么要专门配一个搜索-API" class="headerlink" title="4.1 为什么要专门配一个搜索 API"></a>4.1 为什么要专门配一个搜索 API</h3><p><code>get_attraction</code> 要和 <code>get_weather</code> 配套：先拿天气，再按”某城市 + 某种天气”搜适合玩的景点。</p>
+<p>如果用 <code>requests</code> 直接爬搜索引擎，你得自己解析 HTML、处理反爬、过滤广告，很麻烦。Tavily 是<strong>专为 AI 程序设计的搜索 API</strong>：给它一段 query，它联网检索、自动提炼总结，直接返回干净的 JSON，代码读 <code>answer</code> 字段就行。</p>
+<p>代价是<strong>需要 API Key、按次数扣额度</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>搜索深度</th>
+<th>特点</th>
+<th>消耗</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>basic</code></td>
+<td>快、够用</td>
+<td>1 credit</td>
+</tr>
+<tr>
+<td><code>advanced</code></td>
+<td>检索更多网页、更全面</td>
+<td>2 credit</td>
+</tr>
+</tbody></table>
+<p>免费套餐每月 1500 额度，个人学习完全够用。</p>
+<h3 id="4-2-search-的三个参数"><a href="#4-2-search-的三个参数" class="headerlink" title="4.2 search() 的三个参数"></a>4.2 <code>search()</code> 的三个参数</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tavily.search(query=query, search_depth=<span class="string">&quot;basic&quot;</span>, include_answer=<span class="literal">True</span>)</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>query=query</code>：等号左边是<strong>参数名</strong>，右边是你定义的变量。比如 <code>query = f&quot;{city} 在{weather}天气下最值得去的旅游景点推荐及理由&quot;</code>。</li>
+<li><code>search_depth=&quot;basic&quot;</code>：搜索深度。</li>
+<li><code>include_answer=True</code>：让 Tavily 把结果<strong>总结成一段简短答案</strong>，返回里才会有 <code>answer</code> 字段。为 <code>False</code>（默认）时没有这个字段，只能自己拼 <code>results</code> 里的网页摘要。</li>
+</ul>
+<h3 id="4-3-get-与-的区别"><a href="#4-3-get-与-的区别" class="headerlink" title="4.3 .get() 与 [] 的区别"></a>4.3 <code>.get()</code> 与 <code>[]</code> 的区别</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> response.get(<span class="string">&quot;answer&quot;</span>):</span><br><span class="line">    <span class="keyword">return</span> response[<span class="string">&quot;answer&quot;</span>]</span><br><span class="line"></span><br><span class="line">formatted_results = []</span><br><span class="line"><span class="keyword">for</span> result <span class="keyword">in</span> response.get(<span class="string">&quot;results&quot;</span>, []):</span><br><span class="line">    formatted_results.append(<span class="string">f&quot;- <span class="subst">&#123;result[<span class="string">&#x27;title&#x27;</span>]&#125;</span>: <span class="subst">&#123;result[<span class="string">&#x27;content&#x27;</span>]&#125;</span>&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<p><code>dict.get(key, default)</code> 是<strong>安全取值</strong>：key 不存在时返回默认值（不传则返回 <code>None</code>），不会报错。而 <code>dict[key]</code> 在 key 不存在时直接抛 <code>KeyError</code>。</p>
+<ul>
+<li><code>response.get(&quot;answer&quot;)</code>：有 <code>answer</code> 且非空 → 直接返回总结</li>
+<li><code>response.get(&quot;results&quot;, [])</code>：拿结果列表，<strong>没有时给个空列表兜底</strong>，后面的 <code>for</code> 就不会因为 <code>None</code> 报错</li>
+</ul>
+<p><code>f&quot;- {result[&#39;title&#39;]}: {result[&#39;content&#39;]}&quot;</code> 里的 <code>f</code> 是 f-string，<code>{变量}</code> 会被自动替换成值。开头的 <code>- </code> 是 markdown 的无序列表标记，<strong>纯粹为了排版</strong>，对程序逻辑没有任何作用。</p>
+<hr>
+<h2 id="五、模型层：OpenAICompatibleClient"><a href="#五、模型层：OpenAICompatibleClient" class="headerlink" title="五、模型层：OpenAICompatibleClient"></a>五、模型层：<code>OpenAICompatibleClient</code></h2><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">from</span> openai <span class="keyword">import</span> OpenAI</span><br><span class="line"></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">OpenAICompatibleClient</span>:</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self, model: <span class="built_in">str</span>, api_key: <span class="built_in">str</span>, base_url: <span class="built_in">str</span></span>):</span><br><span class="line">        <span class="variable language_">self</span>.model = model</span><br><span class="line">        <span class="variable language_">self</span>.client = OpenAI(api_key=api_key, base_url=base_url)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">generate</span>(<span class="params">self, prompt: <span class="built_in">str</span>, system_prompt: <span class="built_in">str</span></span>) -&gt; <span class="built_in">str</span>:</span><br><span class="line">        messages = [</span><br><span class="line">            &#123;<span class="string">&#x27;role&#x27;</span>: <span class="string">&#x27;system&#x27;</span>, <span class="string">&#x27;content&#x27;</span>: system_prompt&#125;,</span><br><span class="line">            &#123;<span class="string">&#x27;role&#x27;</span>: <span class="string">&#x27;user&#x27;</span>, <span class="string">&#x27;content&#x27;</span>: prompt&#125;</span><br><span class="line">        ]</span><br><span class="line">        response = <span class="variable language_">self</span>.client.chat.completions.create(</span><br><span class="line">            model=<span class="variable language_">self</span>.model, messages=messages, stream=<span class="literal">False</span></span><br><span class="line">        )</span><br><span class="line">        <span class="keyword">return</span> response.choices[<span class="number">0</span>].message.content</span><br></pre></td></tr></table></figure>
+
+<p>这个类的价值在于<strong>兼容性</strong>：用官方 <code>openai</code> SDK，只要对方提供 OpenAI 兼容接口，改 <code>base_url</code> + <code>api_key</code> + <code>model</code> 就能切换。DeepSeek、通义千问、本地 Ollama 都适用。</p>
+<ul>
+<li><code>__init__</code>：构造方法，创建对象时自动执行，把配置存成实例属性</li>
+<li><code>system</code> 角色设定身份规则，<code>user</code> 角色代表用户问题——这是 OpenAI 接口的固定格式</li>
+<li><code>stream=False</code>：非流式，一次性返回完整回答</li>
+<li><code>response.choices[0].message.content</code>：<code>choices</code> 是候选回答列表（默认 1 条），取第一条的文本</li>
+</ul>
+<p>实际配置时这三个值从 <code>.env</code> 读，比如 DeepSeek 是：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">API_KEY  = os.environ[<span class="string">&quot;DEEPSEEK_API_KEY&quot;</span>]</span><br><span class="line">BASE_URL = <span class="string">&quot;https://api.deepseek.com/v1&quot;</span></span><br><span class="line">MODEL_ID = <span class="string">&quot;deepseek-flash&quot;</span></span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="六、【重点】Agent-循环：今天最绕的地方"><a href="#六、【重点】Agent-循环：今天最绕的地方" class="headerlink" title="六、【重点】Agent 循环：今天最绕的地方"></a>六、【重点】Agent 循环：今天最绕的地方</h2><p>前面几块都是”零件”，这一节才是 Agent 的核心。我在这里卡了很久，单独写透。</p>
+<h3 id="6-1-为什么需要循环"><a href="#6-1-为什么需要循环" class="headerlink" title="6.1 为什么需要循环"></a>6.1 为什么需要循环</h3><p>大模型<strong>只会输出文字，没有执行能力</strong>。它说”我要查天气”，天气不会自己出现——得由你的程序解析出这句话，真的去调函数，再把结果喂回去。</p>
+<p>所以流程必然是：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">LLM 输出 Thought + Action  →  程序解析并执行  →  得到 Observation  →  喂回 LLM  →  循环</span><br></pre></td></tr></table></figure>
+
+<p>约定格式（ReAct 范式）：</p>
+<ul>
+<li><code>Thought:</code> 模型的思考</li>
+<li><code>Action:</code> 模型决定调用的工具</li>
+<li><code>Observation:</code> 工具返回的结果（由程序填写）</li>
+</ul>
+<h3 id="6-2-prompt-history-和-full-prompt-到底是什么关系"><a href="#6-2-prompt-history-和-full-prompt-到底是什么关系" class="headerlink" title="6.2 prompt_history 和 full_prompt 到底是什么关系"></a>6.2 <code>prompt_history</code> 和 <code>full_prompt</code> 到底是什么关系</h3><p>先看代码：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 循环外</span></span><br><span class="line">prompt_history = [<span class="string">f&quot;用户请求: <span class="subst">&#123;user_prompt&#125;</span>&quot;</span>]</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">5</span>):</span><br><span class="line">    <span class="comment"># 循环内</span></span><br><span class="line">    full_prompt = <span class="string">&quot;\n&quot;</span>.join(prompt_history)          <span class="comment"># ← 每轮重算</span></span><br><span class="line">    llm_output = llm.generate(full_prompt, ...)</span><br><span class="line">    prompt_history.append(llm_output)                 <span class="comment"># ← 累积</span></span><br><span class="line">    observation = available_tools[tool_name](**kwargs)</span><br><span class="line">    prompt_history.append(<span class="string">f&quot;Observation: <span class="subst">&#123;observation&#125;</span>&quot;</span>)   <span class="comment"># ← 累积</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>这是我卡住最久的地方。</strong> 关键要理解一个前提：</p>
+<blockquote>
+<p><strong>大模型 API 是无状态的。</strong> 每次调用都是一次独立的 HTTP 请求，服务端不记得你上一轮发过什么，也不记得模型自己说过什么。它每次都从零开始读你发过去的这段文本。</p>
+</blockquote>
+<p>所以：<strong>想让模型”记得”之前发生了什么，唯一的办法就是每轮把完整历史重新发一遍。</strong></p>
+<p>用个比喻——想象你雇了一个顾问，<strong>他每次接电话前都失忆</strong>：</p>
+<ul>
+<li><strong>笔记本</strong> &#x3D; <code>prompt_history</code>：只有一本，循环外创建，循环里只往里加、从不重置</li>
+<li><strong>这次电话念出去的内容</strong> &#x3D; <code>full_prompt</code>：每次都要把笔记本<strong>从头到尾念一遍</strong></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>位置</th>
+<th><code>prompt_history</code> 的内容</th>
+<th>本轮 <code>full_prompt</code></th>
+</tr>
+</thead>
+<tbody><tr>
+<td>循环前</td>
+<td><code>[①用户请求]</code></td>
+<td>—</td>
+</tr>
+<tr>
+<td>循环1 L172</td>
+<td><code>[①]</code></td>
+<td><code>①</code></td>
+</tr>
+<tr>
+<td>循环1 L184</td>
+<td><code>[①,②Thought+Action]</code></td>
+<td></td>
+</tr>
+<tr>
+<td>循环1 L213</td>
+<td><code>[①,②,③Observation]</code></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>循环2 L172</strong></td>
+<td><code>[①,②,③]</code></td>
+<td><code>①\n②\n③</code></td>
+</tr>
+<tr>
+<td>循环2 L184</td>
+<td><code>[①,②,③,④Thought+Action]</code></td>
+<td></td>
+</tr>
+<tr>
+<td>循环2 L213</td>
+<td><code>[①,②,③,④,⑤Observation]</code></td>
+<td></td>
+</tr>
+<tr>
+<td><strong>循环3 L172</strong></td>
+<td><code>[①,②,③,④,⑤]</code></td>
+<td><code>①\n②\n③\n④\n⑤</code></td>
+</tr>
+</tbody></table>
+<p>三句话总结：</p>
+<ol>
+<li><strong><code>prompt_history</code> 是账本</strong>：整场对话的流水账，累计、只增不减。每轮加 2 项（模型的输出 + 工具的观察）。</li>
+<li><strong><code>full_prompt</code> 是快照</strong>：在每轮开头把当时的账本拍成一段文本发出去。第 N 轮的 <code>full_prompt</code> &#x3D; 前 N-1 轮的完整记录 + 最初那条用户请求，<strong>不含本轮即将产生的内容</strong>。</li>
+<li><strong>因此 <code>full_prompt</code> 必须每轮重算</strong>：本轮结束账本又变长了，不重算下一轮发出去的还是旧的。</li>
+</ol>
+<p>用递推式看得更清楚——<code>full_prompt</code> 像滚雪球，每轮加上上一轮新产生的两条：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">full_prompt(循环1) = ①</span><br><span class="line">full_prompt(循环2) = ① ② ③          ← 就是 循环1的full_prompt + ②③</span><br><span class="line">full_prompt(循环3) = ① ② ③ ④ ⑤      ← 就是 循环2的full_prompt + ④⑤</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-3-那”之前的内容”不是一直在重复吗？"><a href="#6-3-那”之前的内容”不是一直在重复吗？" class="headerlink" title="6.3 那”之前的内容”不是一直在重复吗？"></a>6.3 那”之前的内容”不是一直在重复吗？</h3><p><strong>是，而且这是必须的。</strong> 但要区分两种”重复”：</p>
+<ul>
+<li>❌ <strong>不是同一段话在账本里存了 N 遍</strong>。每轮 append 的都是<strong>新</strong>产生的内容，账本是一条线性增长的流水账，长度是 1 → 3 → 5 → 7。</li>
+<li>✅ <strong>确实重复的是：每轮把账本全部念出去</strong>。循环 3 的 prompt 里必然包含循环 1、2 的全部内容。</li>
+</ul>
+<p>为什么必须重念？因为顾问失忆了。不重念，模型就不知道天气已经查过了，会一遍遍重复调 <code>get_weather</code>。</p>
+<p><strong>代价</strong>：prompt 每轮变长，5 轮循环的总 token 消耗大致是 O(n²)。对话一长成本和延迟都会飙升——这正是后续章节「上下文工程」要解决的问题。</p>
+<p><strong>局限</strong>：历史全给了，模型也不一定用得好。我跑的时候观察到，模型有时会把<strong>完全相同的工具调用</strong>连着发两次，尽管上一次的 <code>Observation</code> 就在历史里。这说明<strong>光靠塞历史并不能保证模型不犯傻</strong>，所以才需要评测和更好的上下文组织。</p>
+<h3 id="6-4-为什么要在-L184-截断多余的-Thought-Action"><a href="#6-4-为什么要在-L184-截断多余的-Thought-Action" class="headerlink" title="6.4 为什么要在 L184 截断多余的 Thought-Action"></a>6.4 为什么要在 L184 截断多余的 Thought-Action</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">match</span> = re.search(</span><br><span class="line">    <span class="string">r&#x27;(Thought:.*?Action:.*?)(?=\n\s*(?:Thought:|Action:|Observation:)|\Z)&#x27;</span>,</span><br><span class="line">    llm_output, re.DOTALL</span><br><span class="line">)</span><br><span class="line"><span class="keyword">if</span> <span class="keyword">match</span>:</span><br><span class="line">    truncated = <span class="keyword">match</span>.group(<span class="number">1</span>).strip()</span><br><span class="line">    <span class="keyword">if</span> truncated != llm_output.strip():</span><br><span class="line">        llm_output = truncated</span><br><span class="line">        <span class="built_in">print</span>(<span class="string">&quot;已截断多余的 Thought-Action 对&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<p>大模型有时会<strong>一次预测多轮</strong>，把后面好几轮的 Thought+Action 一起生成出来。不截断的话，程序解析 Action 时会乱套。</p>
+<p>正则拆解：</p>
+<ul>
+<li><code>r&#39;...&#39;</code>：原始字符串，正则推荐的写法，避免 <code>\</code> 转义冲突</li>
+<li><code>(Thought:.*?Action:.*?)</code>：捕获组。<code>.*?</code> 是<strong>非贪婪</strong>匹配，尽可能少地拿字符</li>
+<li><code>(?=\n\s*(?:Thought:|Action:|Observation:)|\Z)</code>：<strong>正向预查（零宽断言）</strong>——它是”停止信号”，用于判断匹配到哪结束，但<strong>不会</strong>把这段内容抓进结果。意思是：遇到下一轮的 <code>Thought/Action/Observation</code>（前面可能有换行和空白），或者<strong>文本结尾</strong>（<code>\Z</code>），就停下来</li>
+<li><code>re.DOTALL</code>：让 <code>.</code> 能匹配换行。不加的话 <code>.</code> 遇到 <code>\n</code> 就停，多行的 Thought&#x2F;Action 匹配不上</li>
+</ul>
+<p><code>if truncated != llm_output.strip():</code> 这一步是<strong>先比较再替换</strong>——本来就只有一轮的话（截断结果和原文相同），就不做多余操作。</p>
+<hr>
+<h2 id="七、Action-解析：三个正则的分工"><a href="#七、Action-解析：三个正则的分工" class="headerlink" title="七、Action 解析：三个正则的分工"></a>七、Action 解析：三个正则的分工</h2><p>模型输出的 <code>Action: get_attraction(city=&quot;南昌&quot;, weather=&quot;晴天&quot;)</code> 要被拆成函数名和参数：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> action_str.startswith(<span class="string">&quot;Finish&quot;</span>):</span><br><span class="line">    final_answer = re.<span class="keyword">match</span>(<span class="string">r&quot;Finish\[(.*)\]&quot;</span>, action_str).group(<span class="number">1</span>)</span><br><span class="line">    <span class="keyword">break</span></span><br><span class="line"></span><br><span class="line">tool_name = re.search(<span class="string">r&quot;(\w+)\(&quot;</span>, action_str).group(<span class="number">1</span>)        <span class="comment"># → &quot;get_attraction&quot;</span></span><br><span class="line">args_str  = re.search(<span class="string">r&quot;\((.*)\)&quot;</span>, action_str).group(<span class="number">1</span>)        <span class="comment"># → &#x27;city=&quot;南昌&quot;, weather=&quot;晴天&quot;&#x27;</span></span><br><span class="line">kwargs    = <span class="built_in">dict</span>(re.findall(<span class="string">r&#x27;(\w+)=&quot;([^&quot;]*)&quot;&#x27;</span>, args_str))     <span class="comment"># → &#123;&quot;city&quot;:&quot;南昌&quot;,&quot;weather&quot;:&quot;晴天&quot;&#125;</span></span><br></pre></td></tr></table></figure>
+
+<p>逐条：</p>
+<ol>
+<li><strong>判断结束</strong>：<code>startswith(&quot;Finish&quot;)</code> 判断 Action 是否以 <code>Finish</code> 开头（区分大小写）。<code>re.match</code> 从<strong>字符串开头</strong>匹配，<code>\[</code> 和 <code>\]</code> 把正则里有特殊含义的方括号转义成普通字符。<code>.group(1)</code> 取第一个捕获组，即中括号里的答案。</li>
+<li><strong>取函数名</strong>：<code>(\w+)\(</code> 匹配”若干单词字符 + 左括号”，捕获组拿到括号前的函数名。</li>
+<li><strong>取参数字符串</strong>：<code>\((.*)\)</code> 捕获括号内的全部内容。注意 <code>.*</code> 是<strong>贪婪</strong>的，会一路匹配到<strong>最后一个</strong> <code>)</code>。</li>
+<li><strong>拆参数</strong>：<code>re.findall</code> 扫描出<strong>所有</strong>匹配。<code>(\w+)</code> 是参数名，<code>=&quot;</code> 匹配等号加引号，<code>([^&quot;]*)</code> 里的 <code>[^&quot;]</code> 表示”不是双引号的任意字符”，遇到 <code>&quot;</code> 就停。返回 <code>[(&quot;city&quot;,&quot;南昌&quot;), (&quot;weather&quot;,&quot;晴天&quot;)]</code>，用 <code>dict()</code> 转成字典。</li>
+</ol>
+<h3 id="为什么先-search-再-findall，不直接-findall？"><a href="#为什么先-search-再-findall，不直接-findall？" class="headerlink" title="为什么先 search 再 findall，不直接 findall？"></a>为什么先 <code>search</code> 再 <code>findall</code>，不直接 findall？</h3><p>技术上直接对 <code>action_str</code> 做 findall <strong>也能跑</strong>，但先切出括号内的 <code>args_str</code> 是为了<strong>限定匹配范围</strong>。</p>
+<p>因为大模型经常”自由发挥”，可能在括号外面也写类似 <code>xxx=&quot;yyy&quot;</code> 的内容：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">action_str = <span class="string">&#x27;get_attraction(city=&quot;南昌&quot;,weather=&quot;晴天&quot;) remark=&quot;这是多余内容&quot;&#x27;</span></span><br><span class="line">re.findall(<span class="string">r&#x27;(\w+)=&quot;([^&quot;]*)&quot;&#x27;</span>, action_str)</span><br><span class="line"><span class="comment"># [(&#x27;city&#x27;,&#x27;南昌&#x27;), (&#x27;weather&#x27;,&#x27;晴天&#x27;), (&#x27;remark&#x27;,&#x27;这是多余内容&#x27;)]  ← 混进了不属于参数的内容</span></span><br></pre></td></tr></table></figure>
+
+<p>先 <code>re.search(r&quot;\((.*)\)&quot;, ...)</code> 只保留括号内，括号外的全部丢弃，杜绝误匹配。这是工具解析里很重要的防御手段：<strong>限定匹配范围，防止模型的额外输出把正则带偏</strong>。</p>
+<p>同理，<code>re.match</code> 返回 <code>None</code> 时直接调 <code>.group(1)</code> 会崩，正式项目里应该包一层判断或 try-except。</p>
+<hr>
+<h2 id="八、闭环回顾"><a href="#八、闭环回顾" class="headerlink" title="八、闭环回顾"></a>八、闭环回顾</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">用户提问: &quot;北京今天去哪玩&quot;</span><br><span class="line">      │</span><br><span class="line">      ▼</span><br><span class="line">┌─────────────────────────────────────────────┐</span><br><span class="line">│  full_prompt = &quot;\n&quot;.join(prompt_history)     │  ← 每轮把账本全部念一遍</span><br><span class="line">│              ↓                              │</span><br><span class="line">│  调用 LLM，拿到 Thought + Action             │</span><br><span class="line">│              ↓                              │</span><br><span class="line">│  正则截断多余的 Thought-Action               │</span><br><span class="line">│              ↓                              │</span><br><span class="line">│  解析 Action                                 │</span><br><span class="line">│     ├─ 以 Finish 开头 → 提取答案，break 结束  │</span><br><span class="line">│     └─ 否则解析函数名和参数                    │</span><br><span class="line">│              ↓                              │</span><br><span class="line">│  执行工具（get_weather / get_attraction）     │</span><br><span class="line">│              ↓                              │</span><br><span class="line">│  得到 Observation                            │</span><br><span class="line">│              ↓                              │</span><br><span class="line">│  prompt_history.append(模型输出)             │  ← 账本变厚</span><br><span class="line">│  prompt_history.append(Observation)          │</span><br><span class="line">└──────────────┬──────────────────────────────┘</span><br><span class="line">               │  账本更长了，回到开头重新念</span><br><span class="line">               └──────────────► 循环</span><br></pre></td></tr></table></figure>
+
+<p>核心就是一句话：<strong>大模型无状态，所以每轮都要把账本从头念一遍；账本每轮都在变厚，所以 <code>full_prompt</code> 必须每轮重算。</strong></p>
+<hr>
+<h2 id="九、几个我还在想的点"><a href="#九、几个我还在想的点" class="headerlink" title="九、几个我还在想的点"></a>九、几个我还在想的点</h2><ol>
+<li><p><strong>把整段历史塞进一个 <code>user</code> message</strong>，这是本章的简化写法（第 4 章的 ReAct 实现也是同样风格）。更规范的做法是用 <code>messages</code> 的多轮角色区分：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">messages = [</span><br><span class="line">    &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;system&quot;</span>,    <span class="string">&quot;content&quot;</span>: AGENT_SYSTEM_PROMPT&#125;,</span><br><span class="line">    &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>,      <span class="string">&quot;content&quot;</span>: <span class="string">&quot;用户请求: ...&quot;</span>&#125;,</span><br><span class="line">    &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;assistant&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">&quot;Thought: ... Action: get_weather(...)&quot;</span>&#125;,</span><br><span class="line">    &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>,      <span class="string">&quot;content&quot;</span>: <span class="string">&quot;Observation: 北京当前天气：Haze...&quot;</span>&#125;,</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+
+<p>这样模型能区分”这是我自己说的”还是”这是环境反馈的”，通常更稳，也更有利于 prompt caching 省钱。</p>
+</li>
+<li><p><strong>异常处理的粒度</strong>：<code>except Exception</code> 一把抓虽然省事，但没法区分是网络问题、密钥失效还是额度耗尽。正式项目应该按层拆开，并且<strong>让错误提示文案和真实原因对应</strong>——就像 3.3 里那个”城市写错却报网络问题”的例子。</p>
+</li>
+<li><p><strong>O(n²) 的 token 增长</strong>：目前 5 轮循环无所谓，但任务一长就必须做上下文裁剪或摘要。这是后面章节的主题。</p>
+</li>
+</ol>
+<hr>
+<h2 id="十、小结"><a href="#十、小结" class="headerlink" title="十、小结"></a>十、小结</h2><p>第一章最值钱的不是那两百行代码，而是让你亲手体会到三件事：</p>
+<ol>
+<li><strong>工具是 Agent 的手</strong>：模型只会说，执行要靠程序解析它的输出。</li>
+<li><strong>循环是 Agent 的心跳</strong>：Thought → Action → Observation 反复滚动，直到 <code>Finish</code>。</li>
+<li><strong>历史管理是 Agent 的记忆</strong>：因为 API 无状态，每一轮都得把过去完整带上——这是后面所有”上下文工程”问题的源头。</li>
+</ol>
+<p>理解了这三点，再去看更复杂的框架，会发现它们本质上都在回答同一个问题：<strong>怎么把合适的历史，在合适的时机，喂给一个永远失忆的模型。</strong></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a target="_blank" rel="noopener" href="https://github.com/Haoz-code">Haoz-code</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://haoz-code.github.io/2026/10/15/hello-agents-chapter1-notes/">https://haoz-code.github.io/2026/10/15/hello-agents-chapter1-notes/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://haoz-code.github.io" target="_blank">Haoz 的博客</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Agent/">Agent</a><a class="post-meta__tags" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a><a class="post-meta__tags" href="/tags/%E5%A4%A7%E6%A8%A1%E5%9E%8B/">大模型</a><a class="post-meta__tags" href="/tags/Datawhale/">Datawhale</a></div><div class="post-share"><div class="social-share" data-image="https://avatars.githubusercontent.com/u/180089599?v=4" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/10/14/first-post/" title="第一篇，随便聊聊"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">第一篇，随便聊聊</div></div><div class="info-2"><div class="info-item-1">折腾了差不多一整天，这个博客总算能见人了。   先说搭这个博客我是那种「工具没调好就没法干活」的人。所以正经内容一个字还没写，先把主题、配色、页脚全折腾了一遍——  毛玻璃效果调了三回，中间一度把背景搞成了灰白色，自己吓自己一跳 页脚那个蓝色渐变，要求「从下往上过渡」，改了好几遍才算顺眼 还顺手修了一堆 404：标签页、分类页、导航栏，点哪儿哪儿空  现在想想挺不划算的。但话又说回来，看着顺眼的东西，才愿意天天打开它。 再说说为什么想写其实我犹豫了很久。 一是觉得自己没什么可写的。本科四年下来，最诚实的总结大概是「三年啥也没学到」——这句话我写在关于页里了，不是矫情，是真这么觉得。 二是怕写错。技术这东西，写得不对反而是害人。 后来想通了：正是因为写得不好，才更要写。  写下来，才发现自己哪儿是「大概懂」，哪儿是真不懂 有个地方能放自己的笔记，总比散在几十个记事本里强 万一有人搜到、恰好被帮到了，那就是净赚  接下来打算写什么大致这几个方向，想到哪写到哪：  📝 学习记录：网络安全方向跟着学，学到哪记到哪 🐍 代码笔记：Python、C++、Linux 这些踩过的坑 🛠️ ...</div></div></div></a></nav><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="giscus-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="https://avatars.githubusercontent.com/u/180089599?v=4" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Haoz-code</div><div class="author-info-description">Haoz 的个人博客</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">3</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">6</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/Haoz-code"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/Haoz-code" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">欢迎来到我的博客 👋</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%80%E3%80%81%E8%BF%99%E4%B8%80%E7%AB%A0%E5%9C%A8%E8%AE%B2%E4%BB%80%E4%B9%88"><span class="toc-number">1.</span> <span class="toc-text">一、这一章在讲什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%8C%E3%80%81%E5%8A%A8%E6%89%8B%E4%B9%8B%E5%89%8D%EF%BC%9A%E7%8E%AF%E5%A2%83%E8%B8%A9%E5%9D%91%E5%AE%9E%E5%BD%95"><span class="toc-number">2.</span> <span class="toc-text">二、动手之前：环境踩坑实录</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%89%E3%80%81%E5%B7%A5%E5%85%B7%E4%B8%80%EF%BC%9Aget-weather-%E2%80%94%E2%80%94-%E8%B0%83-API-%E6%8B%BF%E6%95%B0%E6%8D%AE"><span class="toc-number">3.</span> <span class="toc-text">三、工具一：get_weather —— 调 API 拿数据</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-current-condition-%E5%88%B0%E5%BA%95%E6%98%AF%E4%BB%80%E4%B9%88"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 current_condition 到底是什么</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E4%B8%A4%E4%B8%AA-except-%E7%9A%84%E5%88%86%E5%B7%A5"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 两个 except 的分工</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-%E2%9A%A0%EF%B8%8F-%E4%B8%80%E4%B8%AA%E6%83%B3%E5%BD%93%E7%84%B6%E7%9A%84%E5%9D%91%EF%BC%88%E5%AE%9E%E6%B5%8B%E7%BA%A0%E6%AD%A3%EF%BC%89"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 ⚠️ 一个想当然的坑（实测纠正）</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%9B%9B%E3%80%81%E5%B7%A5%E5%85%B7%E4%BA%8C%EF%BC%9Aget-attraction-%E2%80%94%E2%80%94-Tavily-%E8%81%94%E7%BD%91%E6%90%9C%E7%B4%A2"><span class="toc-number">4.</span> <span class="toc-text">四、工具二：get_attraction —— Tavily 联网搜索</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E4%B8%93%E9%97%A8%E9%85%8D%E4%B8%80%E4%B8%AA%E6%90%9C%E7%B4%A2-API"><span class="toc-number">4.1.</span> <span class="toc-text">4.1 为什么要专门配一个搜索 API</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-search-%E7%9A%84%E4%B8%89%E4%B8%AA%E5%8F%82%E6%95%B0"><span class="toc-number">4.2.</span> <span class="toc-text">4.2 search() 的三个参数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-get-%E4%B8%8E-%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="toc-number">4.3.</span> <span class="toc-text">4.3 .get() 与 [] 的区别</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%BA%94%E3%80%81%E6%A8%A1%E5%9E%8B%E5%B1%82%EF%BC%9AOpenAICompatibleClient"><span class="toc-number">5.</span> <span class="toc-text">五、模型层：OpenAICompatibleClient</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AD%E3%80%81%E3%80%90%E9%87%8D%E7%82%B9%E3%80%91Agent-%E5%BE%AA%E7%8E%AF%EF%BC%9A%E4%BB%8A%E5%A4%A9%E6%9C%80%E7%BB%95%E7%9A%84%E5%9C%B0%E6%96%B9"><span class="toc-number">6.</span> <span class="toc-text">六、【重点】Agent 循环：今天最绕的地方</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%E5%BE%AA%E7%8E%AF"><span class="toc-number">6.1.</span> <span class="toc-text">6.1 为什么需要循环</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2-prompt-history-%E5%92%8C-full-prompt-%E5%88%B0%E5%BA%95%E6%98%AF%E4%BB%80%E4%B9%88%E5%85%B3%E7%B3%BB"><span class="toc-number">6.2.</span> <span class="toc-text">6.2 prompt_history 和 full_prompt 到底是什么关系</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-3-%E9%82%A3%E2%80%9D%E4%B9%8B%E5%89%8D%E7%9A%84%E5%86%85%E5%AE%B9%E2%80%9D%E4%B8%8D%E6%98%AF%E4%B8%80%E7%9B%B4%E5%9C%A8%E9%87%8D%E5%A4%8D%E5%90%97%EF%BC%9F"><span class="toc-number">6.3.</span> <span class="toc-text">6.3 那”之前的内容”不是一直在重复吗？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-4-%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E5%9C%A8-L184-%E6%88%AA%E6%96%AD%E5%A4%9A%E4%BD%99%E7%9A%84-Thought-Action"><span class="toc-number">6.4.</span> <span class="toc-text">6.4 为什么要在 L184 截断多余的 Thought-Action</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B8%83%E3%80%81Action-%E8%A7%A3%E6%9E%90%EF%BC%9A%E4%B8%89%E4%B8%AA%E6%AD%A3%E5%88%99%E7%9A%84%E5%88%86%E5%B7%A5"><span class="toc-number">7.</span> <span class="toc-text">七、Action 解析：三个正则的分工</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88%E5%85%88-search-%E5%86%8D-findall%EF%BC%8C%E4%B8%8D%E7%9B%B4%E6%8E%A5-findall%EF%BC%9F"><span class="toc-number">7.1.</span> <span class="toc-text">为什么先 search 再 findall，不直接 findall？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%85%AB%E3%80%81%E9%97%AD%E7%8E%AF%E5%9B%9E%E9%A1%BE"><span class="toc-number">8.</span> <span class="toc-text">八、闭环回顾</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E4%B9%9D%E3%80%81%E5%87%A0%E4%B8%AA%E6%88%91%E8%BF%98%E5%9C%A8%E6%83%B3%E7%9A%84%E7%82%B9"><span class="toc-number">9.</span> <span class="toc-text">九、几个我还在想的点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%8D%81%E3%80%81%E5%B0%8F%E7%BB%93"><span class="toc-number">10.</span> <span class="toc-text">十、小结</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/10/15/hello-agents-chapter1-notes/" title="Hello-Agents 第一章学习笔记：亲手拆开一个 Agent 的运转闭环">Hello-Agents 第一章学习笔记：亲手拆开一个 Agent 的运转闭环</a><time datetime="2026-10-15T11:50:00.000Z" title="发表于 2026-10-15 19:50:00">2026-10-15</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/10/14/first-post/" title="第一篇，随便聊聊">第一篇，随便聊聊</a><time datetime="2026-10-14T08:45:00.000Z" title="发表于 2026-10-14 16:45:00">2026-10-14</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/10/13/hello-world/" title="Hello World">Hello World</a><time datetime="2026-10-13T12:33:17.025Z" title="发表于 2026-10-13 20:33:17">2026-10-13</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Haoz-code</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.7.1.260810</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.7.1.260810"></script><script src="/js/main.js?v=5.7.1.260810"></script><div class="js-pjax"><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = {"data-lang":"zh-CN","data-category":"Announcements"}
+
+  const getGiscusTheme = theme => theme === 'dark' ? 'dark' : 'light'
+
+  const createScriptElement = config => {
+    const ele = document.createElement('script')
+    Object.entries(config).forEach(([key, value]) => {
+      ele.setAttribute(key, value)
+    })
+    return ele
+  }
+
+  const loadGiscus = (el = document, key) => {
+    const mappingConfig = isShuoshuo
+      ? { 'data-mapping': 'specific', 'data-term': key }
+      : { 'data-mapping': (option && option['data-mapping']) || 'pathname' }
+
+    const giscusConfig = {
+      src: 'https://giscus.app/client.js',
+      'data-repo': 'Haoz-code/haoz-code.github.io',
+      'data-repo-id': 'R_kgDOVHbOlw',
+      'data-category-id': 'DIC_kwDOVHbOl84DIVIQ',
+      'data-theme': getGiscusTheme(document.documentElement.getAttribute('data-theme')),
+      'data-reactions-enabled': '1',
+      crossorigin: 'anonymous',
+      async: true,
+      ...option,
+      ...mappingConfig
+    }
+
+    const scriptElement = createScriptElement(giscusConfig)
+
+    el.querySelector('#giscus-wrap').appendChild(scriptElement)
+
+    if (isShuoshuo) {
+      window.shuoshuoComment.destroyGiscus = () => {
+        if (el.children.length) {
+          el.innerHTML = ''
+          el.classList.add('no-comment')
+        }
+      }
+    }
+  }
+
+  const changeGiscusTheme = theme => {
+    const iframe = document.querySelector('#giscus-wrap iframe')
+    if (iframe) {
+      const message = {
+        giscus: {
+          setConfig: {
+            theme: getGiscusTheme(theme)
+          }
+        }
+      }
+      iframe.contentWindow.postMessage(message, 'https://giscus.app')
+    }
+  }
+
+  btf.addGlobalFn('themeChange', changeGiscusTheme, 'giscus')
+
+  if (isShuoshuo) {
+    'Giscus' === 'Giscus'
+      ? window.shuoshuoComment = { loadComment: loadGiscus }
+      : window.loadOtherComment = loadGiscus
+    return
+  }
+
+  if ('Giscus' === 'Giscus' || !false) {
+    if (false) btf.loadComment(document.getElementById('giscus-wrap'), loadGiscus)
+    else loadGiscus()
+  } else {
+    window.loadOtherComment = loadGiscus
+  }
+})()</script></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.7.1.260810"></script></div></div></body></html>
