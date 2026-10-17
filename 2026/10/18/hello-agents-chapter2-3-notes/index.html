@@ -1,0 +1,1098 @@
+<!DOCTYPE html><html lang="zh-CN" data-theme="light"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1.0,viewport-fit=cover"><title>Hello-Agents 第二、三章学习笔记：从符号主义到 Decoder-Only | Haoz 的博客</title><meta name="author" content="Haoz-code"><meta name="copyright" content="Haoz-code"><meta name="format-detection" content="telephone=no"><meta name="theme-color" content="ffffff"><meta name="description" content="以《Hello-Agents》第二、三章为线索，把智能体发展史、Transformer 原理、分词与推理串成一条线，附实测结论与面试向总结。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Hello-Agents 第二、三章学习笔记：从符号主义到 Decoder-Only">
+<meta property="og:url" content="https://haoz-code.github.io/2026/10/18/hello-agents-chapter2-3-notes/index.html">
+<meta property="og:site_name" content="Haoz 的博客">
+<meta property="og:description" content="以《Hello-Agents》第二、三章为线索，把智能体发展史、Transformer 原理、分词与推理串成一条线，附实测结论与面试向总结。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://avatars.githubusercontent.com/u/180089599?v=4">
+<meta property="article:published_time" content="2026-10-17T18:33:00.000Z">
+<meta property="article:modified_time" content="2026-10-17T18:55:30.538Z">
+<meta property="article:author" content="Haoz-code">
+<meta property="article:tag" content="Agent">
+<meta property="article:tag" content="Datawhale">
+<meta property="article:tag" content="Transformer">
+<meta property="article:tag" content="大模型">
+<meta property="article:tag" content="学习笔记">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://avatars.githubusercontent.com/u/180089599?v=4"><script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": "Hello-Agents 第二、三章学习笔记：从符号主义到 Decoder-Only",
+  "url": "https://haoz-code.github.io/2026/10/18/hello-agents-chapter2-3-notes/",
+  "image": "https://avatars.githubusercontent.com/u/180089599?v=4",
+  "datePublished": "2026-10-17T18:33:00.000Z",
+  "dateModified": "2026-10-17T18:55:30.538Z",
+  "author": [
+    {
+      "@type": "Person",
+      "name": "Haoz-code",
+      "url": "https://github.com/Haoz-code"
+    }
+  ]
+}</script><link rel="shortcut icon" href="/img/favicon.png"><link rel="canonical" href="https://haoz-code.github.io/2026/10/18/hello-agents-chapter2-3-notes/index.html"><link rel="preconnect" href="//cdn.jsdelivr.net"/><link rel="preconnect" href="//busuanzi.ibruce.info"/><link rel="stylesheet" href="/css/index.css?v=5.7.1.260810"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@7.3.1/css/all.min.css"><script>
+    (() => {
+      
+    const saveToLocal = {
+      set: (key, value, ttl) => {
+        try {
+          const data = { value }
+
+          if (ttl != null) {
+            data.expiry = Date.now() + ttl * 86400000
+          }
+
+          localStorage.setItem(key, JSON.stringify(data))
+        } catch (e) {
+          console.error(e)
+        }
+      },
+      get: key => {
+        const itemStr = localStorage.getItem(key)
+        if (!itemStr) return
+
+        try {
+          const data = JSON.parse(itemStr)
+
+          if (data.expiry && Date.now() > data.expiry) {
+            localStorage.removeItem(key)
+            return
+          }
+
+          return data.value
+        } catch {
+          localStorage.removeItem(key)
+        }
+      }
+    }
+
+    const scriptCache = new Map()
+    const cssCache = new Map()
+    window.btf = {
+      saveToLocal,
+      getScript: (url, attr = {}) => {
+        if (scriptCache.has(url)) {
+          return scriptCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const script = document.createElement('script')
+
+          script.src = url
+          script.async = true
+
+          for (const key in attr) {
+            script.setAttribute(key, attr[key])
+          }
+
+          script.onload = resolve
+          script.onerror = reject
+
+          document.head.appendChild(script)
+        })
+
+        scriptCache.set(url, promise)
+
+        return promise
+      },
+      getCSS: (url, id) => {
+        if (cssCache.has(url)) {
+          return cssCache.get(url)
+        }
+
+        const promise = new Promise((resolve, reject) => {
+          const link = document.createElement('link')
+
+          link.rel = 'stylesheet'
+          link.href = url
+
+          if (id) {
+            link.id = id
+          }
+
+          link.onload = resolve
+          link.onerror = reject
+
+          document.head.appendChild(link)
+        })
+
+        cssCache.set(url, promise)
+
+        return promise
+      },
+      addGlobalFn: (key, fn, name = false, parent = window) => {
+        if (!false && key.startsWith('pjax')) return
+        const globalFn = parent.globalFn || {}
+        globalFn[key] = globalFn[key] || {}
+        globalFn[key][name || Object.keys(globalFn[key]).length] = fn
+        parent.globalFn = globalFn
+      }
+    }
+  
+      
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]')
+      const activateDarkMode = () => {
+        document.documentElement.dataset.theme = 'dark'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', '#0d0d0d')
+        }
+      }
+      const activateLightMode = () => {
+        document.documentElement.dataset.theme = 'light'
+        if (metaThemeColor !== null) {
+          metaThemeColor.setAttribute('content', 'ffffff')
+        }
+      }
+
+      btf.activateDarkMode = activateDarkMode
+      btf.activateLightMode = activateLightMode
+
+      const theme = saveToLocal.get('theme')
+    
+          theme === 'dark' ? activateDarkMode() : theme === 'light' ? activateLightMode() : null
+        
+      
+      const asideStatus = saveToLocal.get('aside-status')
+      if (asideStatus !== undefined) {
+        document.documentElement.classList.toggle('hide-aside', asideStatus === 'hide')
+      }
+    
+      
+    const detectApple = () => {
+      if (/iPad|iPhone|iPod|Macintosh/.test(navigator.userAgent)) {
+        document.documentElement.classList.add('apple')
+      }
+    }
+    detectApple()
+  
+    })()
+  </script><script>const GLOBAL_CONFIG = {
+  root: '/',
+  algolia: undefined,
+  localSearch: {"path":"/search.json","preload":false,"top_n_per_article":1,"unescape":false,"pagination":{"enable":false,"hitsPerPage":8},"languages":{"hits_empty":"未找到符合您查询的内容：${query}","hits_stats":"共找到 ${hits} 篇文章"}},
+  translate: undefined,
+  highlight: {"plugin":"highlight.js","highlightCopy":true,"highlightLang":true,"highlightHeightLimit":false,"highlightFullpage":false,"highlightMacStyle":false},
+  copy: {
+    success: '复制成功',
+    error: '复制失败',
+    noSupport: '浏览器不支持'
+  },
+  relativeDate: {
+    homepage: false,
+    post: false
+  },
+  runtime: '',
+  dateSuffix: {
+    just: '刚刚',
+    min: '分钟前',
+    hour: '小时前',
+    day: '天前',
+    month: '个月前'
+  },
+  copyright: undefined,
+  lightbox: 'null',
+  Snackbar: undefined,
+  infinitegrid: {
+    js: 'https://cdn.jsdelivr.net/npm/@egjs/infinitegrid@4.13.0/dist/infinitegrid.min.js',
+    buttonText: '加载更多'
+  },
+  isPhotoFigcaption: false,
+  islazyloadPlugin: false,
+  isAnchor: false,
+  percent: {
+    toc: true,
+    rightside: false,
+  },
+  autoDarkmode: false
+}</script><script id="config-diff">var GLOBAL_CONFIG_SITE = {
+  title: 'Hello-Agents 第二、三章学习笔记：从符号主义到 Decoder-Only',
+  isHighlightShrink: false,
+  isToc: true,
+  pageType: 'post'
+}</script><link rel="stylesheet" href="/css/custom.css?v=6"><meta name="generator" content="Hexo 8.1.2"><style>mjx-container[jax="SVG"] {
+  direction: ltr;
+}
+
+mjx-container[jax="SVG"] > svg {
+  overflow: visible;
+}
+
+mjx-container[jax="SVG"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="SVG"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="SVG"][justify="right"] {
+  text-align: right;
+}
+
+g[data-mml-node="merror"] > g {
+  fill: red;
+  stroke: red;
+}
+
+g[data-mml-node="merror"] > rect[data-background] {
+  fill: yellow;
+  stroke: none;
+}
+
+g[data-mml-node="mtable"] > line[data-line] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > rect[data-frame] {
+  stroke-width: 70px;
+  fill: none;
+}
+
+g[data-mml-node="mtable"] > .mjx-dashed {
+  stroke-dasharray: 140;
+}
+
+g[data-mml-node="mtable"] > .mjx-dotted {
+  stroke-linecap: round;
+  stroke-dasharray: 0,140;
+}
+
+g[data-mml-node="mtable"] > svg {
+  overflow: visible;
+}
+
+[jax="SVG"] mjx-tool {
+  display: inline-block;
+  position: relative;
+  width: 0;
+  height: 0;
+}
+
+[jax="SVG"] mjx-tool > mjx-tip {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+mjx-tool > mjx-tip {
+  display: inline-block;
+  padding: .2em;
+  border: 1px solid #888;
+  font-size: 70%;
+  background-color: #F8F8F8;
+  color: black;
+  box-shadow: 2px 2px 5px #AAAAAA;
+}
+
+g[data-mml-node="maction"][data-toggle] {
+  cursor: pointer;
+}
+
+mjx-status {
+  display: block;
+  position: fixed;
+  left: 1em;
+  bottom: 1em;
+  min-width: 25%;
+  padding: .2em .4em;
+  border: 1px solid #888;
+  font-size: 90%;
+  background-color: #F8F8F8;
+  color: black;
+}
+
+foreignObject[data-mjx-xml] {
+  font-family: initial;
+  line-height: normal;
+  overflow: visible;
+}
+
+.MathJax path {
+  stroke-width: 3;
+}
+
+mjx-container[display="true"] {
+  overflow: auto hidden;
+}
+
+mjx-container[display="true"] + br {
+  display: none;
+}
+</style></head><body><div id="sidebar"><div id="menu-mask"></div><div id="sidebar-menus"><div class="avatar-img text-center"><img src="https://avatars.githubusercontent.com/u/180089599?v=4" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="site-data text-center"><a href="/archives/"><div class="headline">文章</div><div class="length-num">4</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">7</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div></div></div><div class="post" id="body-wrap"><header class="post-bg" id="page-header" style="background-image: url(/img/banner.png);"><nav id="nav"><span id="blog-info"><a class="nav-site-title" href="/"><span class="site-name">Haoz 的博客</span></a><a class="nav-page-title" href="/"><span class="site-name">Hello-Agents 第二、三章学习笔记：从符号主义到 Decoder-Only</span><span class="site-name"><i class="fa-solid fa-circle-arrow-left"></i><span>  返回首页</span></span></a></span><div id="menus"><div id="search-button"><span class="site-page social-icon search"><i class="fas fa-search fa-fw"></i><span> 搜索</span></span></div><div class="menus_items"><div class="menus_item"><a class="site-page" href="/"><i class="fa-fw fas fa-home"></i><span> 首页</span></a></div><div class="menus_item"><a class="site-page" href="/archives/"><i class="fa-fw fas fa-archive"></i><span> 归档</span></a></div><div class="menus_item"><a class="site-page" href="/tags/"><i class="fa-fw fas fa-tags"></i><span> 标签</span></a></div><div class="menus_item"><a class="site-page" href="/categories/"><i class="fa-fw fas fa-folder-open"></i><span> 分类</span></a></div><div class="menus_item"><a class="site-page" href="/about/"><i class="fa-fw fas fa-user"></i><span> 关于</span></a></div></div><div id="toggle-menu"><span class="site-page"><i class="fas fa-bars fa-fw"></i></span></div></div></nav><div id="post-info"><h1 class="post-title">Hello-Agents 第二、三章学习笔记：从符号主义到 Decoder-Only</h1><div id="post-meta"><div class="meta-firstline"><span class="post-meta-date"><i class="far fa-calendar-alt fa-fw post-meta-icon"></i><span class="post-meta-label">发表于</span><time class="post-meta-date-created" datetime="2026-10-17T18:33:00.000Z" title="发表于 2026-10-18 02:33:00">2026-10-18</time><span class="post-meta-separator">|</span><i class="fas fa-history fa-fw post-meta-icon"></i><span class="post-meta-label">更新于</span><time class="post-meta-date-updated" datetime="2026-10-17T18:55:30.538Z" title="更新于 2026-10-18 02:55:30">2026-10-18</time></span><span class="post-meta-categories"><span class="post-meta-separator">|</span><i class="fas fa-inbox fa-fw post-meta-icon"></i><a class="post-meta-categories" href="/categories/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a></span></div><div class="meta-secondline"><span class="post-meta-separator">|</span><span class="post-meta-wordcount"><i class="far fa-file-word fa-fw post-meta-icon"></i><span class="post-meta-label">总字数:</span><span class="word-count">8962</span><span class="post-meta-separator">|</span><i class="far fa-clock fa-fw post-meta-icon"></i><span class="post-meta-label">阅读时长:</span><span>35 分钟</span></span><span class="post-meta-separator">|</span><span class="post-meta-pv-cv" id="" data-flag-title=""><i class="far fa-eye fa-fw post-meta-icon"></i><span class="post-meta-label">浏览量:</span><span id="busuanzi_value_page_pv"><i class="fa-solid fa-spinner fa-spin"></i></span></span></div></div></div></header><main class="layout" id="content-inner"><div id="post"><article class="container post-content" id="article-container"><blockquote>
+<p>以《Hello-Agents》第二、三章为线索，把智能体发展史、Transformer 原理、分词与推理串成一条线。文中保留了我在动手过程中真正卡住的问题，并附上实测结论和面试向总结。</p>
+</blockquote>
+<span id="more"></span>
+
+<hr>
+<h2 id="🧭-一、先给一条主线：范式是「问题驱动」迭代出来的"><a href="#🧭-一、先给一条主线：范式是「问题驱动」迭代出来的" class="headerlink" title="🧭 一、先给一条主线：范式是「问题驱动」迭代出来的"></a>🧭 一、先给一条主线：范式是「问题驱动」迭代出来的</h2><p>学完这两章，我最想先记下来的不是某个公式，而是这条主线：</p>
+<blockquote>
+<p><strong>每一个新范式的出现，都是为了解决上一代范式的核心痛点；而它在带来能力飞跃的同时，又引入了新的局限，为下一代范式埋下伏笔。</strong></p>
+</blockquote>
+<p>这句话解释了为什么今天的大模型长成这个样子。把历史串起来看：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">符号主义（规则+知识）</span><br><span class="line">  痛点：知识获取瓶颈、常识缺失、系统脆弱</span><br><span class="line">        ↓</span><br><span class="line">联结主义（从数据中学权重）</span><br><span class="line">  解决了感知，但不会做序贯决策</span><br><span class="line">        ↓</span><br><span class="line">强化学习（与环境交互、试错）</span><br><span class="line">  会决策了，但缺乏先验知识，每个任务从零开始</span><br><span class="line">        ↓</span><br><span class="line">大规模预训练（自监督学习）</span><br><span class="line">  有了世界知识和通用推理，但知识会过时、会幻觉</span><br><span class="line">        ↓</span><br><span class="line">LLM 驱动的智能体（模型 + 记忆 + 规划 + 工具）</span><br></pre></td></tr></table></figure>
+
+<p>理解这条线，比记住任何一个单独的知识点都重要。下面的内容基本就是沿着它展开的。</p>
+<hr>
+<h2 id="🏛️-二、智能体的前史：符号主义的三次碰壁"><a href="#🏛️-二、智能体的前史：符号主义的三次碰壁" class="headerlink" title="🏛️ 二、智能体的前史：符号主义的三次碰壁"></a>🏛️ 二、智能体的前史：符号主义的三次碰壁</h2><h3 id="2-1-物理符号系统假说：智能-符号计算"><a href="#2-1-物理符号系统假说：智能-符号计算" class="headerlink" title="2.1 物理符号系统假说：智能 &#x3D; 符号计算"></a>2.1 物理符号系统假说：智能 &#x3D; 符号计算</h3><p>1976 年，纽厄尔和西蒙提出<strong>物理符号系统假说（PSSH）</strong>，包含两个论断：</p>
+<ol>
+<li><strong>充分性</strong>：任何物理符号系统，都具备产生通用智能行为的充分手段。</li>
+<li><strong>必要性</strong>：任何能展现通用智能的系统，本质上必然是物理符号系统。</li>
+</ol>
+<p>它把”什么是智能”这个哲学问题，转化成了”如何表示知识、如何设计推理算法”的工程问题。在那个年代，这个假说给了研究者极大的信心。</p>
+<h3 id="2-2-专家系统与-SHRDLU"><a href="#2-2-专家系统与-SHRDLU" class="headerlink" title="2.2 专家系统与 SHRDLU"></a>2.2 专家系统与 SHRDLU</h3><p>符号主义最成功的产物是<strong>专家系统</strong>：把领域专家的知识编码成 <code>IF-THEN</code> 规则，让机器在特定领域给出媲美专家的结论。</p>
+<p>另一个标志性项目是 <strong>SHRDLU</strong>——它能理解自然语言指令、操作积木世界、回答关于场景的问题，在当时看来近乎”通用智能”。但它的成功有一个前提：<strong>运行在一个规则完备的封闭世界里</strong>。</p>
+<h3 id="2-3-为什么符号主义走不通"><a href="#2-3-为什么符号主义走不通" class="headerlink" title="2.3 为什么符号主义走不通"></a>2.3 为什么符号主义走不通</h3><p>从 20 世纪 80 年代起，符号主义在走向开放世界时撞上了四面墙：</p>
+<p><strong>（1）知识获取瓶颈</strong><br>专家知识要靠人工访谈、提炼、编码，成本高、难规模化。更麻烦的是，人类大量知识是<strong>内隐的、直觉的</strong>，根本说不清自己是怎么判断的，自然也没法写成规则。</p>
+<p><strong>（2）常识问题</strong><br>人类行为依赖庞大的常识背景（”水是湿的””绳子能拉不能推”），但符号系统不明确编码就一无所知。Cyc 项目为此努力数十年，成果依然有限。</p>
+<p><strong>（3）框架问题</strong><br>智能体执行一个动作后，如何高效判断”哪些事物没变”是个逻辑难题。为每个动作显式声明所有不变状态，计算上不可行。</p>
+<p><strong>（4）系统脆弱性</strong><br>规则之外的一点变化就可能让系统完全失灵。SHRDLU 的成功恰恰因为它待在一个封闭世界里，而真实世界充满例外。</p>
+<p>这四条，本质上是同一句话：<strong>靠人把世界显式编码出来，规模上不可行。</strong></p>
+<h3 id="2-4-ELIZA：规则聊天机器人的启示"><a href="#2-4-ELIZA：规则聊天机器人的启示" class="headerlink" title="2.4 ELIZA：规则聊天机器人的启示"></a>2.4 ELIZA：规则聊天机器人的启示</h3><p>ELIZA 是早期基于规则的聊天机器人。它的核心是<strong>模式匹配 + 文本替换</strong>：用正则匹配用户输入，再从模板库里挑一句回应。比如把”我觉得 X”转成”你为什么觉得 X？”</p>
+<p>它带来的启示很有意思：<strong>人很容易把”像人一样的语言行为”误认为”真的理解”</strong>。这被称为”ELIZA 效应”。它也提醒我们，判断一个系统是否真的”智能”，不能只看它说话像不像人。</p>
+<h3 id="2-5-明斯基的心智社会：从单体到协作"><a href="#2-5-明斯基的心智社会：从单体到协作" class="headerlink" title="2.5 明斯基的心智社会：从单体到协作"></a>2.5 明斯基的心智社会：从单体到协作</h3><p>马文·明斯基提出<strong>心智社会（Society of Mind）</strong>：智能不是某个中心模块的产物，而是大量简单单元交互后<strong>涌现</strong>出来的整体行为。</p>
+<p>这个思想在当时没有直接落地，但它为后来的<strong>多智能体系统</strong>提供了哲学基础——今天的多 Agent 协作、分工、辩论，本质上都能在这里找到源头。</p>
+<hr>
+<h2 id="🎓-三、学习范式：从「被设计」到「被训练」"><a href="#🎓-三、学习范式：从「被设计」到「被训练」" class="headerlink" title="🎓 三、学习范式：从「被设计」到「被训练」"></a>🎓 三、学习范式：从「被设计」到「被训练」</h2><p>符号主义的困境引出了一个关键问题：</p>
+<blockquote>
+<p><strong>如果智能无法被完全设计，那它能不能被学习出来？</strong></p>
+</blockquote>
+<h3 id="3-1-联结主义：知识存在权重里"><a href="#3-1-联结主义：知识存在权重里" class="headerlink" title="3.1 联结主义：知识存在权重里"></a>3.1 联结主义：知识存在权重里</h3><p><strong>联结主义</strong>是自下而上的思路，灵感来自生物神经网络：</p>
+<ul>
+<li><strong>分布式表示</strong>：知识不存放在明确的符号规则里，而是分布在大量神经元的<strong>连接权重</strong>中</li>
+<li><strong>简单单元</strong>：每个神经元只做加权求和 + 激活函数</li>
+<li><strong>学习调整权重</strong>：通过反向传播等算法，根据样本自动迭代权重</li>
+</ul>
+<p>和符号主义最大的区别：<strong>符号主义把知识显式编码给机器，联结主义让机器自己学出知识。</strong></p>
+<p>它解决了感知问题（”这张图里有什么”），但还不擅长决策（”我接下来该做什么”）。</p>
+<h3 id="3-2-强化学习：在试错中学会决策"><a href="#3-2-强化学习：在试错中学会决策" class="headerlink" title="3.2 强化学习：在试错中学会决策"></a>3.2 强化学习：在试错中学会决策</h3><p><strong>强化学习（RL）</strong> 专注序贯决策，核心框架由五个要素构成：</p>
+<table>
+<thead>
+<tr>
+<th>要素</th>
+<th>含义</th>
+<th>AlphaGo 中的例子</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Agent</td>
+<td>学习者和决策者</td>
+<td>决策程序</td>
+</tr>
+<tr>
+<td>Environment</td>
+<td>外部世界</td>
+<td>围棋规则和对手</td>
+</tr>
+<tr>
+<td>State</td>
+<td>环境的当前描述</td>
+<td>棋盘布局</td>
+</tr>
+<tr>
+<td>Action</td>
+<td>可采取的操作</td>
+<td>落子位置</td>
+</tr>
+<tr>
+<td>Reward</td>
+<td>行动的评价信号</td>
+<td>赢了 +1，输了 −1</td>
+</tr>
+</tbody></table>
+<p>工作循环是：<strong>观察状态 → 按策略选行动 → 环境转移并给奖励 → 更新策略</strong>。</p>
+<p>目标是最大化<strong>累积奖励（回报）</strong>，而不是即时奖励——所以智能体需要”远见”，有时要牺牲眼前利益（围棋里的”弃子”）。</p>
+<h3 id="3-3-预训练：解决知识获取瓶颈"><a href="#3-3-预训练：解决知识获取瓶颈" class="headerlink" title="3.3 预训练：解决知识获取瓶颈"></a>3.3 预训练：解决知识获取瓶颈</h3><p>RL 智能体虽然会决策，但<strong>缺乏先验知识</strong>，每个任务都从零开始。解决方案来自 NLP：</p>
+<p><strong>预训练 + 微调</strong> 两步走：</p>
+<ol>
+<li><strong>预训练</strong>：在海量互联网文本上做自监督学习，目标就是”预测下一个词”。学的是语言规律、事实知识和上下文逻辑。</li>
+<li><strong>微调</strong>：针对下游任务，用少量标注数据调整。</li>
+</ol>
+<p>这一步真正解决了符号主义最头疼的<strong>知识获取瓶颈</strong>：知识不再需要人工编码，而是从数据中自动压缩进模型权重。</p>
+<p>更惊人的是<strong>涌现能力（Emergent Abilities）</strong>——当规模跨过某个阈值后，模型会突然具备训练目标之外的能力：</p>
+<ul>
+<li><strong>上下文学习（In-context Learning）</strong>：给几个示例甚至零示例，就能完成新任务</li>
+<li><strong>思维链推理（Chain-of-Thought）</strong>：引导模型先输出推理步骤，复杂任务准确率显著提升</li>
+</ul>
+<h3 id="3-4-LLM-驱动的现代智能体：感知-→-思考-→-行动-→-观察"><a href="#3-4-LLM-驱动的现代智能体：感知-→-思考-→-行动-→-观察" class="headerlink" title="3.4 LLM 驱动的现代智能体：感知 → 思考 → 行动 → 观察"></a>3.4 LLM 驱动的现代智能体：感知 → 思考 → 行动 → 观察</h3><p>到这里，历史的技术拼图汇合了：</p>
+<ul>
+<li>符号主义提供了<strong>逻辑推理框架</strong></li>
+<li>联结主义和 RL 提供了<strong>学习与决策能力</strong></li>
+<li>LLM 提供了<strong>世界知识和通用推理</strong></li>
+</ul>
+<p>现代智能体的闭环可以抽象为：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">感知 Perception ──► 思考 Thought ──► 行动 Action ──► 观察 Observation</span><br><span class="line">      ▲                    │                │                  │</span><br><span class="line">      │                    ▼                ▼                  │</span><br><span class="line">      │              规划/记忆模块      工具调用             │</span><br><span class="line">      └────────────────────────────────────────────────────────┘</span><br><span class="line">                        （循环，直到任务完成）</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>感知</strong>：接收用户指令、API 返回、环境状态</li>
+<li><strong>思考</strong>：规划模块拆解目标，LLM 结合记忆做推理和决策</li>
+<li><strong>行动</strong>：执行模块解析工具调用，真正去调 API &#x2F; 跑代码 &#x2F; 搜网页</li>
+<li><strong>观察</strong>：工具结果和环境新状态反馈回来，更新记忆，进入下一轮</li>
+</ul>
+<p>第一章那个”查天气 + 推景点”的小 Agent，就是这条闭环的最小实现。</p>
+<hr>
+<h2 id="📈-四、语言模型的三级跳：N-gram-→-词嵌入-→-RNN"><a href="#📈-四、语言模型的三级跳：N-gram-→-词嵌入-→-RNN" class="headerlink" title="📈 四、语言模型的三级跳：N-gram → 词嵌入 → RNN"></a>📈 四、语言模型的三级跳：N-gram → 词嵌入 → RNN</h2><h3 id="4-1-N-gram：用马尔可夫假设做计数"><a href="#4-1-N-gram：用马尔可夫假设做计数" class="headerlink" title="4.1 N-gram：用马尔可夫假设做计数"></a>4.1 N-gram：用马尔可夫假设做计数</h3><p>语言模型的根本任务是计算一个词序列出现的概率。按链式法则：</p>
+<p>$$P(w_1,\dots,w_m)&#x3D;P(w_1)\cdot P(w_2\mid w_1)\cdots P(w_m\mid w_1,\dots,w_{m-1})$$</p>
+<p>但长条件概率几乎无法从语料中估计——那个词序列可能从没出现过。</p>
+<p>于是引入<strong>马尔可夫假设</strong>：一个词只和它前面有限的 $n-1$ 个词有关。这就是 <strong>N-gram</strong>。</p>
+<ul>
+<li><strong>Bigram（N&#x3D;2）</strong>：$P(w_i\mid w_{i-1})$</li>
+<li><strong>Trigram（N&#x3D;3）</strong>：$P(w_i\mid w_{i-2},w_{i-1})$</li>
+</ul>
+<p>概率用<strong>最大似然估计</strong>，说白了就是数数：</p>
+<p>$$P(w_i\mid w_{i-1})&#x3D;\frac{Count(w_{i-1},w_i)}{Count(w_{i-1})}$$</p>
+<p><strong>局限</strong>：上下文窗口固定；没见过词对概率直接为 0（数据稀疏）；只记住了字面组合，没有泛化能力。</p>
+<h3 id="4-2-词嵌入：king-−-man-woman-≈-queen"><a href="#4-2-词嵌入：king-−-man-woman-≈-queen" class="headerlink" title="4.2 词嵌入：king − man + woman ≈ queen"></a>4.2 词嵌入：king − man + woman ≈ queen</h3><p>神经网络语言模型的关键创新是<strong>词嵌入</strong>：把词映射成稠密向量，而且这些向量是在训练”预测下一个词”的过程中<strong>自动学出来的</strong>。</p>
+<p>有了向量就能算相似度，最常用的是<strong>余弦相似度</strong>：</p>
+<p>$$\text{similarity}(\vec a,\vec b)&#x3D;\frac{\vec a\cdot\vec b}{|\vec a||\vec b|}$$</p>
+<ul>
+<li>方向相同 → 1</li>
+<li>正交 → 0</li>
+<li>方向相反 → −1</li>
+</ul>
+<p>最经典的例子：<code>vector(King) − vector(Man) + vector(Woman)</code> 在向量空间里非常接近 <code>vector(Queen)</code>。这说明向量不仅编码了”词义”，还编码了”性别””皇室”这类抽象关系。</p>
+<div class="note success flat"><p>这一步解决了 N-gram 的泛化问题：没见过”国王 + 女性”的组合，也能通过向量运算推出”女王”。</p>
+</div>
+
+<p>但它仍有一个和 N-gram 类似的毛病：<strong>上下文窗口固定</strong>。</p>
+<h3 id="4-3-RNN-LSTM：给网络加上记忆"><a href="#4-3-RNN-LSTM：给网络加上记忆" class="headerlink" title="4.3 RNN&#x2F;LSTM：给网络加上记忆"></a>4.3 RNN&#x2F;LSTM：给网络加上记忆</h3><p><strong>RNN</strong> 引入<strong>隐藏状态</strong>作为”短期记忆”：每一步读取当前词 + 上一步的隐藏状态，生成新的隐藏状态传给下一步。信息可以在序列中向后传递，不再受固定窗口限制。</p>
+<p>问题是<strong>长期依赖</strong>：训练时梯度要沿序列反向传播，长度一长就会<strong>梯度消失</strong>或<strong>梯度爆炸</strong>，早先的信息学不进去。</p>
+<p><strong>LSTM</strong> 用<strong>细胞状态 + 门控机制</strong>缓解了这个问题：</p>
+<table>
+<thead>
+<tr>
+<th>门</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>遗忘门</td>
+<td>决定从上一时刻的细胞状态丢弃什么</td>
+</tr>
+<tr>
+<td>输入门</td>
+<td>决定当前输入中哪些新信息存进去</td>
+</tr>
+<tr>
+<td>输出门</td>
+<td>决定从细胞状态输出什么到隐藏状态</td>
+</tr>
+</tbody></table>
+<p>细胞状态像一条独立的信息高速公路，让梯度能更顺畅地跨越较长的距离。</p>
+<hr>
+<h2 id="🏗️-五、Transformer-架构拆解"><a href="#🏗️-五、Transformer-架构拆解" class="headerlink" title="🏗️ 五、Transformer 架构拆解"></a>🏗️ 五、Transformer 架构拆解</h2><h3 id="5-1-整体结构：编码器-解码器"><a href="#5-1-整体结构：编码器-解码器" class="headerlink" title="5.1 整体结构：编码器 + 解码器"></a>5.1 整体结构：编码器 + 解码器</h3><p>原始 Transformer 由两部分组成：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">输入 ──► Encoder × N ──► memory ──► Decoder × N ──► 输出</span><br><span class="line">              │                         ▲</span><br><span class="line">              └─────────────────────────┘</span><br><span class="line">                    交叉注意力从这里读</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>Encoder 层</strong>：多头自注意力 → 残差 + LayerNorm → 前馈网络 → 残差 + LayerNorm</li>
+<li><strong>Decoder 层</strong>：掩码自注意力 → 交叉注意力 → 前馈网络，每步都配残差 + LayerNorm</li>
+</ul>
+<p>关键创新是<strong>自注意力</strong>：任意两个位置之间都能直接建立联系，路径长度是 O(1)，而且可以并行计算——这正是 RNN 做不到的。</p>
+<h3 id="5-2-位置编码：i-到底是什么"><a href="#5-2-位置编码：i-到底是什么" class="headerlink" title="5.2 位置编码：i 到底是什么"></a>5.2 位置编码：<code>i</code> 到底是什么</h3><p>自注意力本身<strong>没有顺序概念</strong>（打乱输入顺序，结果不变），所以必须额外注入位置信息。</p>
+<p>公式：</p>
+<p>$$PE_{(pos,2i)}&#x3D;\sin\left(\frac{pos}{10000^{2i&#x2F;d_{model}}}\right),\qquad<br>PE_{(pos,2i+1)}&#x3D;\cos\left(\frac{pos}{10000^{2i&#x2F;d_{model}}}\right)$$</p>
+<p><strong><code>i</code> 是”成对的维度编号”，不是单个维度编号：</strong></p>
+<ul>
+<li>偶数维度 <code>2i</code> → 用 <code>sin</code></li>
+<li>奇数维度 <code>2i+1</code> → 用 <code>cos</code></li>
+<li>范围 <code>i = 0, 1, ..., d_model/2 − 1</code>，共 <code>d_model/2</code> 组，拼起来正好 <code>d_model</code> 维</li>
+</ul>
+<p><strong>实例：d_model &#x3D; 4</strong></p>
+<p>此时 <code>div_term = [1, 0.01]</code>（因为 <code>10000^&#123;-2/4&#125; = 0.01</code>），于是：</p>
+<table>
+<thead>
+<tr>
+<th>i</th>
+<th>维度</th>
+<th>取值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0</td>
+<td>dim0（sin）</td>
+<td>sin(pos &#x2F; 10000^(0&#x2F;4)) &#x3D; <strong>sin(pos)</strong></td>
+</tr>
+<tr>
+<td>0</td>
+<td>dim1（cos）</td>
+<td>cos(pos &#x2F; 10000^(0&#x2F;4)) &#x3D; <strong>cos(pos)</strong></td>
+</tr>
+<tr>
+<td>1</td>
+<td>dim2（sin）</td>
+<td>sin(pos &#x2F; 10000^(2&#x2F;4)) &#x3D; <strong>sin(pos&#x2F;100)</strong></td>
+</tr>
+<tr>
+<td>1</td>
+<td>dim3（cos）</td>
+<td>cos(pos &#x2F; 10000^(2&#x2F;4)) &#x3D; <strong>cos(pos&#x2F;100)</strong></td>
+</tr>
+</tbody></table>
+<p>所以一个位置 <code>pos</code> 的编码是 <code>[sin(pos), cos(pos), sin(pos/100), cos(pos/100)]</code>，长度 4。</p>
+<p><strong>核心意义</strong>：不同 <code>i</code> 对应不同周期。小 <code>i</code> 周期短、分辨率高，捕捉细粒度位置；大 <code>i</code> 周期长，捕捉远距离关系。多种频率叠加，模型才能同时感知近处和远处的相对偏移。</p>
+<div class="note warning flat"><p><strong>易错点</strong>：<code>i</code> 的范围是 <code>0 ~ d_model/2</code>，不是 <code>0 ~ d_model</code>。一个 <code>i</code> 控制一对 sin&#x2F;cos。</p>
+</div>
+
+<p>对应代码：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">position = torch.arange(max_len).unsqueeze(<span class="number">1</span>)          <span class="comment"># [max_len, 1]</span></span><br><span class="line">div_term = torch.exp(</span><br><span class="line">    torch.arange(<span class="number">0</span>, d_model, <span class="number">2</span>) * (-math.log(<span class="number">10000.0</span>) / d_model)</span><br><span class="line">)                                                       <span class="comment"># [d_model/2]</span></span><br><span class="line">pe = torch.zeros(max_len, d_model)</span><br><span class="line">pe[:, <span class="number">0</span>::<span class="number">2</span>] = torch.sin(position * div_term)            <span class="comment"># 偶数维</span></span><br><span class="line">pe[:, <span class="number">1</span>::<span class="number">2</span>] = torch.cos(position * div_term)            <span class="comment"># 奇数维</span></span><br></pre></td></tr></table></figure>
+
+<p><code>torch.arange(0, d_model, 2)</code> 生成的是 <code>[0, 2, 4, ...]</code>，正好对应 <code>2i</code>；<code>exp(-ln(10000)·2i/d_model)</code> 等价于 <code>10000^(-2i/d_model)</code>。</p>
+<h3 id="5-3-register-buffer：为什么位置编码不参与训练"><a href="#5-3-register-buffer：为什么位置编码不参与训练" class="headerlink" title="5.3 register_buffer：为什么位置编码不参与训练"></a>5.3 <code>register_buffer</code>：为什么位置编码不参与训练</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable language_">self</span>.register_buffer(<span class="string">&#x27;pe&#x27;</span>, pe.unsqueeze(<span class="number">0</span>))</span><br></pre></td></tr></table></figure>
+
+<p>分两部分看：</p>
+<p><strong>① <code>pe.unsqueeze(0)</code></strong>：在最前面加一个长度为 1 的维度，<code>[max_len, d_model]</code> → <code>[1, max_len, d_model]</code>。这样输入 <code>[batch_size, seq_len, d_model]</code> 就能通过<strong>广播</strong>直接相加，不需要手动复制 batch 份。</p>
+<p><strong>② <code>register_buffer</code></strong>：把张量注册为模块缓冲区，特点是：</p>
+<ul>
+<li><strong>不是模型参数</strong>，不被优化器更新，也不求梯度（位置编码是固定公式算好的）</li>
+<li><strong>会进 <code>state_dict</code></strong>，随模型一起保存和加载</li>
+<li><strong>自动跟随模型迁移设备</strong>（<code>.to(device)</code> &#x2F; <code>.cuda()</code>）</li>
+</ul>
+<p>对比：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>是否训练</th>
+<th>是否存盘</th>
+<th>是否随模型迁移设备</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>nn.Parameter</code></td>
+<td>✅ 会更新</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td><code>register_buffer</code></td>
+<td>❌ 不更新</td>
+<td>✅</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>普通属性 <code>self.x = tensor</code></td>
+<td>❌</td>
+<td>❌</td>
+<td>❌</td>
+</tr>
+</tbody></table>
+<p>前向传播里：<code>x = x + self.pe[:, :x.size(1), :]</code>，第 1 维截到当前序列长度再加。</p>
+<h3 id="5-4-位置编码之后为什么加-Dropout"><a href="#5-4-位置编码之后为什么加-Dropout" class="headerlink" title="5.4 位置编码之后为什么加 Dropout"></a>5.4 位置编码之后为什么加 Dropout</h3><p>先看顺序：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">x = x + <span class="variable language_">self</span>.pe[:, :x.size(<span class="number">1</span>), :]   <span class="comment"># 词嵌入 + 位置编码（位置信息已经加好了）</span></span><br><span class="line"><span class="keyword">return</span> <span class="variable language_">self</span>.dropout(x)                <span class="comment"># 再对融合后的整体做随机屏蔽</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>不会破坏位置信息</strong>，原因有三：</p>
+<ol>
+<li><strong>位置编码本身高度冗余</strong>：它是多频率正弦的叠加，丢掉部分维度后，剩下的维度仍足以表达相对位置。就像一首歌有很多音轨，静音几条还能听出旋律。</li>
+<li><strong>Dropout 是正则化</strong>：强制模型不依赖少数几个维度，学出更鲁棒的特征，防止过拟合。</li>
+<li><strong>推理阶段自动关闭</strong>：<code>model.eval()</code> 下 Dropout 不生效，向量完整保留，位置信息一点不丢。</li>
+</ol>
+<h3 id="5-5-自注意力-vs-交叉注意力"><a href="#5-5-自注意力-vs-交叉注意力" class="headerlink" title="5.5 自注意力 vs 交叉注意力"></a>5.5 自注意力 vs 交叉注意力</h3><p>两者<strong>计算公式完全一样</strong>：</p>
+<p>$$Attention(Q,K,V)&#x3D;softmax\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$</p>
+<p><strong>唯一区别是 Q、K、V 的来源。</strong></p>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>自注意力</th>
+<th>交叉注意力</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Q 来源</td>
+<td>同一输入</td>
+<td>Decoder 当前输出</td>
+</tr>
+<tr>
+<td>K、V 来源</td>
+<td>同一输入</td>
+<td>Encoder 的 memory</td>
+</tr>
+<tr>
+<td>序列长度</td>
+<td>seq_q &#x3D; seq_k</td>
+<td>可以不同</td>
+</tr>
+<tr>
+<td>作用</td>
+<td>看自己内部 token 的关系</td>
+<td>用 Q 去检索另一段序列的信息</td>
+</tr>
+</tbody></table>
+<p>代码层面：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 自注意力：Q/K/V 全来自 x</span></span><br><span class="line">attn = <span class="variable language_">self</span>.self_attn(x, x, x, mask)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 交叉注意力：Q 来自 x，K/V 来自 encoder_output</span></span><br><span class="line">attn = <span class="variable language_">self</span>.cross_attn(x, encoder_output, encoder_output, src_mask)</span><br></pre></td></tr></table></figure>
+
+<p>书中 <code>DecoderLayer.forward</code> 正是这么写的：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 掩码自注意力（对自己）</span></span><br><span class="line">attn_output = <span class="variable language_">self</span>.self_attn(x, x, x, tgt_mask)</span><br><span class="line">x = <span class="variable language_">self</span>.norm1(x + <span class="variable language_">self</span>.dropout(attn_output))</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 交叉注意力（对编码器输出）</span></span><br><span class="line">cross_attn_output = <span class="variable language_">self</span>.cross_attn(x, encoder_output, encoder_output, src_mask)</span><br><span class="line">x = <span class="variable language_">self</span>.norm2(x + <span class="variable language_">self</span>.dropout(cross_attn_output))</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 前馈网络</span></span><br><span class="line">ff_output = <span class="variable language_">self</span>.feed_forward(x)</span><br><span class="line">x = <span class="variable language_">self</span>.norm3(x + <span class="variable language_">self</span>.dropout(ff_output))</span><br></pre></td></tr></table></figure>
+
+<p>一句话理解：<strong>解码器一边写译文，一边回头看原文对齐语义。</strong></p>
+<h3 id="5-6-剩下的拼图"><a href="#5-6-剩下的拼图" class="headerlink" title="5.6 剩下的拼图"></a>5.6 剩下的拼图</h3><ul>
+<li><strong>多头注意力</strong>：把 <code>d_model</code> 切成 <code>num_heads</code> 份，每个头独立算注意力，再拼接。不同的头可以关注不同类型的关系（语法、指代、位置等）。</li>
+<li><strong>缩放因子 <code>1/√d_k</code></strong>：点积的方差会随维度增大，不缩放会让 softmax 进入饱和区，梯度变得很小。</li>
+<li><strong>残差连接</strong>：<code>x + sublayer(x)</code>，缓解深层网络的梯度消失。</li>
+<li><strong>LayerNorm</strong>：稳定训练。原论文用 Post-LN，很多现代实现用 Pre-LN。</li>
+<li><strong>前馈网络（FFN）</strong>：两层线性 + 激活，先升维到 <code>d_ff</code> 再降回 <code>d_model</code>，提供非线性变换能力。</li>
+<li><strong>掩码（Mask）</strong>：Decoder 的自注意力用<strong>因果掩码</strong>，保证只能看到左边已生成的 token。</li>
+</ul>
+<hr>
+<h2 id="🏆-六、Decoder-Only：为什么它赢了"><a href="#🏆-六、Decoder-Only：为什么它赢了" class="headerlink" title="🏆 六、Decoder-Only：为什么它赢了"></a>🏆 六、Decoder-Only：为什么它赢了</h2><h3 id="6-1-两种架构的比喻"><a href="#6-1-两种架构的比喻" class="headerlink" title="6.1 两种架构的比喻"></a>6.1 两种架构的比喻</h3><p><strong>Encoder-Decoder（T5、BART）</strong> 像”翻译员 + 记录员”两人组队：Encoder 通读原文做笔记（memory），Decoder 一句句写输出，写的时候看笔记（交叉注意力）保证不跑偏。</p>
+<p><strong>Decoder-Only（GPT、Llama、Qwen）</strong> 像”单人作家”：把提问和回答写在同一条纸上，只能看左边已写好的字（掩码自注意力），不断往下续写。没有编码器，也没有交叉注意力。</p>
+<h3 id="6-2-对比"><a href="#6-2-对比" class="headerlink" title="6.2 对比"></a>6.2 对比</h3><table>
+<thead>
+<tr>
+<th>项目</th>
+<th>Encoder-Decoder</th>
+<th>Decoder-Only</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>模块</td>
+<td>Encoder + Decoder，有交叉注意力</td>
+<td>只有带掩码的 Decoder</td>
+</tr>
+<tr>
+<td>注意力</td>
+<td>Encoder 双向；Decoder 单向 + 交叉</td>
+<td>全部单向掩码自注意力</td>
+</tr>
+<tr>
+<td>工作方式</td>
+<td>先编码成 memory，再交叉注意力读取</td>
+<td>prompt 和回答拼成长序列，自回归续写</td>
+</tr>
+<tr>
+<td>典型模型</td>
+<td>T5、BART、原始 Transformer</td>
+<td>GPT、Llama、Qwen、Mistral</td>
+</tr>
+<tr>
+<td>擅长</td>
+<td>翻译、摘要（输入输出界限清晰）</td>
+<td>通用对话、续写、代码、问答</td>
+</tr>
+</tbody></table>
+<div class="note info flat"><p><strong>补充</strong>：<strong>Encoder-only（BERT）</strong> 只有编码器、双向注意力，不能生成文本，只做理解类任务（分类、抽取）。</p>
+</div>
+
+<h3 id="6-3-为什么主流大模型选-Decoder-Only"><a href="#6-3-为什么主流大模型选-Decoder-Only" class="headerlink" title="6.3 为什么主流大模型选 Decoder-Only"></a>6.3 为什么主流大模型选 Decoder-Only</h3><ol>
+<li><strong>架构简单</strong>：一套网络权重，没有编码器和交叉注意力，工程、训练框架、显存优化都更容易，更适合堆到千亿参数。</li>
+<li><strong>任务形式统一</strong>：问答、翻译、摘要、写代码，全部转化为”给一段 prompt 续写”，一个模型通吃。</li>
+<li><strong>训练数据易获取</strong>：预训练目标就是”预测下一个 token”，海量互联网连续文本直接可用；Encoder-Decoder 需要高质量的输入-输出配对数据，稀缺得多。</li>
+<li><strong>推理部署方便</strong>：一套自回归逻辑；Encoder-Decoder 要先跑编码器，再跑解码器 + 交叉注意力，链路更复杂。</li>
+<li><strong>长上下文友好</strong>：所有上下文拼成一条序列，统一用单向注意力处理。</li>
+</ol>
+<p><strong>短板</strong>：没有双向编码器，长输入的理解要靠大参数量 + 长上下文窗口弥补；prompt 越长，每次生成的计算开销越大（Encoder-Decoder 可以把编码结果缓存住，生成阶段不重算）。</p>
+<hr>
+<h2 id="✂️-七、分词：BPE-如何把文字切成-token"><a href="#✂️-七、分词：BPE-如何把文字切成-token" class="headerlink" title="✂️ 七、分词：BPE 如何把文字切成 token"></a>✂️ 七、分词：BPE 如何把文字切成 token</h2><h3 id="7-1-为什么需要分词"><a href="#7-1-为什么需要分词" class="headerlink" title="7.1 为什么需要分词"></a>7.1 为什么需要分词</h3><p>模型只认数字，不认文字。<strong>分词（Tokenization）</strong> 就是把文本切成 token，再映射成 ID。</p>
+<p>粒度选择是个权衡：</p>
+<ul>
+<li><strong>按字&#x2F;词切</strong>：词表爆炸，且遇到未登录词（OOV）就没办法</li>
+<li><strong>按字符切</strong>：词表小，但序列太长，语义太碎</li>
+<li><strong>子词（subword）</strong>：折中方案——常见词保持完整，生僻词拆成片段</li>
+</ul>
+<p><strong>BPE（Byte Pair Encoding）</strong> 是最经典的子词算法，GPT、BERT 的分词器底层都用它。</p>
+<h3 id="7-2-核心思想"><a href="#7-2-核心思想" class="headerlink" title="7.2 核心思想"></a>7.2 核心思想</h3><p>不断统计相邻 token 对的频次，把<strong>最高频的一对合并成新 token</strong>，循环多轮。</p>
+<p>直觉是：高频共现的片段应该被当作一个整体。比如 <code>e</code> 和 <code>s</code> 经常相邻，就合并成 <code>es</code>；<code>es</code> 和 <code>t</code> 经常相邻，再合并成 <code>est</code>。</p>
+<h3 id="7-3-逐行拆解实现"><a href="#7-3-逐行拆解实现" class="headerlink" title="7.3 逐行拆解实现"></a>7.3 逐行拆解实现</h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> re, collections</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">get_stats</span>(<span class="params">vocab</span>):</span><br><span class="line">    <span class="string">&quot;&quot;&quot;统计相邻词元对的出现频次&quot;&quot;&quot;</span></span><br><span class="line">    pairs = collections.defaultdict(<span class="built_in">int</span>)</span><br><span class="line">    <span class="keyword">for</span> word, freq <span class="keyword">in</span> vocab.items():</span><br><span class="line">        symbols = word.split()               <span class="comment"># &#x27;h u g &lt;/w&gt;&#x27; -&gt; [&#x27;h&#x27;,&#x27;u&#x27;,&#x27;g&#x27;,&#x27;&lt;/w&gt;&#x27;]</span></span><br><span class="line">        <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(symbols) - <span class="number">1</span>):    <span class="comment"># n 个元素只有 n-1 组相邻对</span></span><br><span class="line">            pairs[symbols[i], symbols[i+<span class="number">1</span>]] += freq   <span class="comment"># 按词频累加，不是 +1</span></span><br><span class="line">    <span class="keyword">return</span> pairs</span><br><span class="line"></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">merge_vocab</span>(<span class="params">pair, v_in</span>):</span><br><span class="line">    <span class="string">&quot;&quot;&quot;把选中的词元对合并成一个&quot;&quot;&quot;</span></span><br><span class="line">    v_out = &#123;&#125;</span><br><span class="line">    bigram = re.escape(<span class="string">&#x27; &#x27;</span>.join(pair))</span><br><span class="line">    p = re.<span class="built_in">compile</span>(<span class="string">r&#x27;(?&lt;!\S)&#x27;</span> + bigram + <span class="string">r&#x27;(?!\S)&#x27;</span>)</span><br><span class="line">    <span class="keyword">for</span> word <span class="keyword">in</span> v_in:</span><br><span class="line">        w_out = p.sub(<span class="string">&#x27;&#x27;</span>.join(pair), word)</span><br><span class="line">        v_out[w_out] = v_in[word]</span><br><span class="line">    <span class="keyword">return</span> v_out</span><br></pre></td></tr></table></figure>
+
+<p>几个容易看错的点：</p>
+<ul>
+<li><code>collections.defaultdict(int)</code>：访问不存在的 key 时自动返回 0，省掉 <code>if key not in dict</code> 的判断。</li>
+<li><code>pairs[symbols[i], symbols[i+1]] += freq</code>：<strong>累加的是该词的频次</strong>。假设 <code>u g</code> 在词频为 5 的词里出现，它就加 5，而不是加 1。</li>
+<li><code>re.escape()</code>：把 <code>pair</code> 里的正则特殊字符转义掉，避免被当成元字符。</li>
+<li><code>(?&lt;!\S) ... (?!\S)</code>：<strong>只匹配被空白包围的完整词元对</strong>。<code>(?&lt;!\S)</code> 是”前面不是非空白字符”（即行首或空格），<code>(?!\S)</code> 是”后面不是非空白字符”。这样不会把 <code>x u g y</code> 中间片段误当成 <code>u g</code>。</li>
+<li><code>p.sub(&#39;&#39;.join(pair), word)</code>：把 <code>&quot;u g&quot;</code> 替换成 <code>&quot;ug&quot;</code>，即去掉中间空格。</li>
+</ul>
+<p>主循环：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">vocab = &#123;<span class="string">&#x27;h u g &lt;/w&gt;&#x27;</span>: <span class="number">1</span>, <span class="string">&#x27;p u g &lt;/w&gt;&#x27;</span>: <span class="number">1</span>, <span class="string">&#x27;p u n &lt;/w&gt;&#x27;</span>: <span class="number">1</span>, <span class="string">&#x27;b u n &lt;/w&gt;&#x27;</span>: <span class="number">1</span>&#125;</span><br><span class="line">num_merges = <span class="number">4</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(num_merges):</span><br><span class="line">    pairs = get_stats(vocab)</span><br><span class="line">    <span class="keyword">if</span> <span class="keyword">not</span> pairs:</span><br><span class="line">        <span class="keyword">break</span></span><br><span class="line">    best = <span class="built_in">max</span>(pairs, key=pairs.get)   <span class="comment"># 取频次最高的词元对</span></span><br><span class="line">    vocab = merge_vocab(best, vocab)</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">f&quot;第<span class="subst">&#123;i+<span class="number">1</span>&#125;</span>次合并: <span class="subst">&#123;best&#125;</span> -&gt; <span class="subst">&#123;<span class="string">&#x27;&#x27;</span>.join(best)&#125;</span>&quot;</span>)</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>max(pairs, key=pairs.get)</code>：按字典的值（频次）取最大的 key。</li>
+<li><code>if not pairs: break</code>：没有可合并的对时提前退出。</li>
+<li>每轮<strong>只合并一对全局最高频</strong>，不是一次性合并所有相同的 pair。</li>
+</ul>
+<h3 id="7-4-和断言的作用"><a href="#7-4-和断言的作用" class="headerlink" title="7.4 &lt;/w&gt; 和断言的作用"></a>7.4 <code>&lt;/w&gt;</code> 和断言的作用</h3><ul>
+<li><strong><code>&lt;/w&gt;</code></strong> 标记单词结尾，用来区分”词内字符”和”词尾字符”。没有它，<code>low</code> 和 <code>lower</code> 的 <code>low</code> 就没法区分。</li>
+<li><strong>正则断言</strong>保证只匹配完整相邻词元，防止跨词误合并。</li>
+</ul>
+<hr>
+<h2 id="💬-八、提示工程：怎么和模型「说话」"><a href="#💬-八、提示工程：怎么和模型「说话」" class="headerlink" title="💬 八、提示工程：怎么和模型「说话」"></a>💬 八、提示工程：怎么和模型「说话」</h2><p>模型的能力再强，也需要通过<strong>提示（Prompt）</strong> 引导。对智能体来说，提示设计直接影响它的规划和决策质量。</p>
+<h3 id="8-1-采样参数：Temperature-Top-k-Top-p"><a href="#8-1-采样参数：Temperature-Top-k-Top-p" class="headerlink" title="8.1 采样参数：Temperature &#x2F; Top-k &#x2F; Top-p"></a>8.1 采样参数：Temperature &#x2F; Top-k &#x2F; Top-p</h3><p>模型每步输出的是词表上的概率分布。采样参数的作用就是<strong>调整或截断这个分布</strong>。</p>
+<p><strong>Temperature</strong>：把 Softmax 改写成</p>
+<p>$$p_i^{(T)}&#x3D;\frac{e^{z_i&#x2F;T}}{\sum_j e^{z_j&#x2F;T}}$$</p>
+<ul>
+<li><code>T</code> 小 → 分布更陡峭，高概率项被放大，输出更确定、更重复</li>
+<li><code>T</code> 大 → 分布更平坦，低概率项权重上升，输出更多样但可能不连贯</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>温度区间</th>
+<th>特点</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>0 ~ 0.3</td>
+<td>精准、确定</td>
+<td>问答、数据计算、代码生成、法律&#x2F;技术文档</td>
+</tr>
+<tr>
+<td>0.3 ~ 0.7</td>
+<td>平衡、自然</td>
+<td>客服对话、邮件、产品文案</td>
+</tr>
+<tr>
+<td>0.7 ~ 2</td>
+<td>创新、发散</td>
+<td>诗歌、故事构思、广告脑暴</td>
+</tr>
+</tbody></table>
+<p><strong>Top-k</strong>：按概率排序，只保留前 k 个 token 作为候选集，再归一化采样。<code>k=1</code> 退化为贪心采样。</p>
+<p><strong>Top-p（核采样）</strong>：按概率从高到低累加，直到累积和 ≥ p，取这个最小集合作为候选集。相比固定截断的 Top-k，Top-p 能动态适应不同分布的长尾特性。</p>
+<p><strong>三者同时设置时</strong>，优先级是：<strong>温度调整 → Top-k → Top-p</strong>。不过通常 Top-k 和 Top-p 二选一即可，同时设置时实际候选集是两者的交集。</p>
+<p>两个极端：</p>
+<ul>
+<li><code>Temperature = 0</code> → Top-k &#x2F; Top-p 都无关紧要，直接取最高概率</li>
+<li><code>Top-k = 1</code> → 温度和 Top-p 都无关紧要，只有一个候选</li>
+</ul>
+<h3 id="8-2-Zero-shot-Few-shot-CoT"><a href="#8-2-Zero-shot-Few-shot-CoT" class="headerlink" title="8.2 Zero-shot &#x2F; Few-shot &#x2F; CoT"></a>8.2 Zero-shot &#x2F; Few-shot &#x2F; CoT</h3><table>
+<thead>
+<tr>
+<th>类型</th>
+<th>做法</th>
+<th>依赖</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Zero-shot</td>
+<td>不给示例，直接下指令</td>
+<td>预训练带来的泛化能力</td>
+</tr>
+<tr>
+<td>One-shot &#x2F; Few-shot</td>
+<td>给 1 个或多个示例</td>
+<td>上下文学习能力</td>
+</tr>
+<tr>
+<td>Chain-of-Thought</td>
+<td>要求”一步一步思考”</td>
+<td>涌现出的推理能力</td>
+</tr>
+</tbody></table>
+<p>CoT 的价值不只是提高准确率，还让推理过程<strong>可见、可检查、可纠正</strong>——这对智能体的可靠性很重要。</p>
+<hr>
+<h2 id="⚖️-九、模型怎么选"><a href="#⚖️-九、模型怎么选" class="headerlink" title="⚖️ 九、模型怎么选"></a>⚖️ 九、模型怎么选</h2><p>选模型不是”越大越强”这么简单，而是性能、成本、速度、部署方式之间的权衡。可以从八个维度评估：</p>
+<ol>
+<li><strong>性能与能力</strong>：不同模型擅长的任务不同，参考 LMSys Chatbot Arena 等排行榜</li>
+<li><strong>成本</strong>：闭源按 Token 计费；开源看 GPU&#x2F;内存和运维</li>
+<li><strong>速度（延迟）</strong>：实时交互场景（客服、游戏 NPC）尤其重要</li>
+<li><strong>上下文窗口</strong>：长文档分析、代码库理解、长期记忆需要 128K 甚至更大</li>
+<li><strong>部署方式</strong>：API 简单但数据出第三方；本地部署隐私可控但硬件要求高</li>
+<li><strong>生态与工具链</strong>：社区、教程、微调工具、框架支持（LangChain、LlamaIndex、Transformers）</li>
+<li><strong>可微调性</strong>：领域数据定制化，开源模型灵活性更大</li>
+<li><strong>安全与伦理</strong>：偏见、毒性、幻觉，以及服务商的负责任 AI 投入</li>
+</ol>
+<p><strong>闭源 vs 开源</strong>：</p>
+<ul>
+<li>闭源（GPT、Gemini、Claude、文心&#x2F;混元&#x2F;星火等）：开箱即用，代表前沿水平</li>
+<li>开源（Llama、Mistral、Qwen、ChatGLM 等）：可本地部署、可微调、可控性最高</li>
+</ul>
+<p>一句话：<strong>闭源给你便捷，开源给你自由。</strong></p>
+<hr>
+<h2 id="📊-十、缩放法则与固有局限"><a href="#📊-十、缩放法则与固有局限" class="headerlink" title="📊 十、缩放法则与固有局限"></a>📊 十、缩放法则与固有局限</h2><h3 id="10-1-Scaling-Laws-与-Chinchilla"><a href="#10-1-Scaling-Laws-与-Chinchilla" class="headerlink" title="10.1 Scaling Laws 与 Chinchilla"></a>10.1 Scaling Laws 与 Chinchilla</h3><p><strong>缩放法则</strong>揭示了模型性能与参数量、数据量、计算量之间的<strong>幂律关系</strong>：在对数-对数坐标下，Loss 随三者平滑下降，没有明显瓶颈。</p>
+<p>早期大家只盯着参数量，直到 DeepMind 2022 年提出 <strong>Chinchilla 定律</strong>：在给定计算预算下，<strong>参数量和训练数据量存在最优配比</strong>。最优模型往往比之前认为的更小，但需要多得多的数据。</p>
+<p>典型例子：700 亿参数的 Chinchilla 用了比 1750 亿参数的 GPT-3 多 4 倍的数据训练，性能反而更好。这纠正了”越大越好”的片面认知，也指导了后来 Llama 系列的设计。</p>
+<h3 id="10-2-涌现能力"><a href="#10-2-涌现能力" class="headerlink" title="10.2 涌现能力"></a>10.2 涌现能力</h3><p>当规模跨过某个阈值，模型会突然展现出小模型没有的能力：</p>
+<ul>
+<li><strong>上下文学习</strong>：几个示例就能完成新任务</li>
+<li><strong>指令遵循</strong>：理解并执行自然语言指令</li>
+<li><strong>多步推理</strong>：Chain-of-Thought</li>
+<li><strong>代码生成</strong></li>
+</ul>
+<p>这说明大模型不只是”记忆和复述”，可能形成了更深层的抽象能力。对智能体开发者来说，<strong>选一个足够大的模型，是实现复杂自主决策的前提</strong>。</p>
+<h3 id="10-3-幻觉：模型为什么会一本正经地胡说"><a href="#10-3-幻觉：模型为什么会一本正经地胡说" class="headerlink" title="10.3 幻觉：模型为什么会一本正经地胡说"></a>10.3 幻觉：模型为什么会一本正经地胡说</h3><p><strong>幻觉（Hallucination）</strong> 指模型生成与客观事实、用户输入或上下文相矛盾的内容。</p>
+<p>根源在于：模型不是数据库，<strong>没有内置的事实核查模块</strong>，它的本质是<strong>预测下一个最可能的 token</strong>。句子通顺、概率高，不代表事实正确。</p>
+<p>常见分类：</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>事实性幻觉</td>
+<td>生成与现实世界不符的信息</td>
+</tr>
+<tr>
+<td>忠实性幻觉</td>
+<td>摘要&#x2F;翻译等任务未忠实反映源文本</td>
+</tr>
+<tr>
+<td>内在幻觉</td>
+<td>生成内容与输入信息直接矛盾</td>
+</tr>
+</tbody></table>
+<p>（也有人按”内部&#x2F;外部”分：内部指与上下文冲突，外部指编造上下文之外的事实。）</p>
+<p><strong>成因</strong>：</p>
+<ol>
+<li>训练数据里有错误或矛盾的信息</li>
+<li>自回归生成机制只做概率预测，没有事实核查</li>
+<li>复杂推理时中间步骤出错，导致”编造”结论</li>
+</ol>
+<p><strong>缓解手段</strong>：</p>
+<ul>
+<li><strong>RAG（检索增强生成）</strong>：生成前先检索外部知识，把结果作为上下文</li>
+<li><strong>提示词约束</strong>：要求”不知道就说不知道，禁止编造”</li>
+<li><strong>调低 temperature</strong>：降低随机性</li>
+<li><strong>多步推理 + 自我验证</strong></li>
+<li><strong>引入外部工具</strong>：搜索引擎、计算器、代码解释器</li>
+<li><strong>输出后校验</strong>：事实类内容做检索核对</li>
+</ul>
+<p>此外还有两个容易被忽略的局限：<strong>知识时效性不足</strong>（训练数据有截止日期）和<strong>训练数据偏见</strong>（模型会吸收并反映数据中的刻板印象）。</p>
+<hr>
+<h2 id="🔧-十一、实操：HuggingFace-对话生成全流程"><a href="#🔧-十一、实操：HuggingFace-对话生成全流程" class="headerlink" title="🔧 十一、实操：HuggingFace 对话生成全流程"></a>🔧 十一、实操：HuggingFace 对话生成全流程</h2><p>用一个开源模型的完整调用串起前面的所有概念：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 1. 组织对话（纯 Python 数据）</span></span><br><span class="line">messages = [</span><br><span class="line">    &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;system&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">&quot;You are a helpful assistant.&quot;</span>&#125;,</span><br><span class="line">    &#123;<span class="string">&quot;role&quot;</span>: <span class="string">&quot;user&quot;</span>, <span class="string">&quot;content&quot;</span>: <span class="string">&quot;你好，请介绍你自己。&quot;</span>&#125;</span><br><span class="line">]</span><br><span class="line"></span><br><span class="line"><span class="comment"># 2. 套用对话模板拼成字符串</span></span><br><span class="line">text = tokenizer.apply_chat_template(</span><br><span class="line">    messages,</span><br><span class="line">    tokenize=<span class="literal">False</span>,</span><br><span class="line">    add_generation_prompt=<span class="literal">True</span></span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 3. 文字转数字张量，搬到 GPU</span></span><br><span class="line">model_inputs = tokenizer([text], return_tensors=<span class="string">&quot;pt&quot;</span>).to(device)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 4. 生成</span></span><br><span class="line">outputs = model.generate(**model_inputs, max_new_tokens=<span class="number">512</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># 5. 砍掉输入部分，只保留新生成的 token</span></span><br><span class="line">generated_ids = [</span><br><span class="line">    output_ids[<span class="built_in">len</span>(input_ids):]</span><br><span class="line">    <span class="keyword">for</span> input_ids, output_ids <span class="keyword">in</span> <span class="built_in">zip</span>(model_inputs.input_ids, outputs)</span><br><span class="line">]</span><br><span class="line"></span><br><span class="line"><span class="comment"># 6. 数字转回文字</span></span><br><span class="line">response = tokenizer.batch_decode(generated_ids, skip_special_tokens=<span class="literal">True</span>)[<span class="number">0</span>]</span><br></pre></td></tr></table></figure>
+
+<h3 id="11-1-apply-chat-template-在做什么"><a href="#11-1-apply-chat-template-在做什么" class="headerlink" title="11.1 apply_chat_template 在做什么"></a>11.1 <code>apply_chat_template</code> 在做什么</h3><p>把 messages 列表按<strong>模型自带的对话模板</strong>拼成完整字符串。</p>
+<p>不同模型（Llama、Qwen、GLM）的模板不一样，<code>tokenizer</code> 内部已经带好了，<strong>不需要自己手拼特殊标记</strong>。</p>
+<p>三个参数：</p>
+<ol>
+<li><strong><code>messages</code></strong>：标准 chat 格式列表，<code>role</code> 只能是 <code>system</code> &#x2F; <code>user</code> &#x2F; <code>assistant</code></li>
+<li><strong><code>tokenize=False</code></strong>：返回<strong>原始字符串</strong>，而不是 token id 列表</li>
+<li><strong><code>add_generation_prompt=True</code></strong>：在末尾追加 assistant 起始标记，告诉模型”轮到你了”</li>
+</ol>
+<p>拼接结果类似（Qwen 模板示意）：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">&lt;|im_start|&gt;system</span><br><span class="line">You are a helpful assistant.&lt;|im_end|&gt;</span><br><span class="line">&lt;|im_start|&gt;user</span><br><span class="line">你好，请介绍你自己。&lt;|im_end|&gt;</span><br><span class="line">&lt;|im_start|&gt;assistant</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>为什么字典列表最后变成一句话？因为模型看不懂 Python 结构，只能看连续文字。字典只是<strong>描述</strong>哪段是系统提示、哪段是用户提问。</p>
+</blockquote>
+<h3 id="11-2-model-inputs-是什么"><a href="#11-2-model-inputs-是什么" class="headerlink" title="11.2 model_inputs 是什么"></a>11.2 <code>model_inputs</code> 是什么</h3><p>也是一个字典，主要包含：</p>
+<ul>
+<li><strong><code>input_ids</code></strong>：分词后的数字张量，形状 <code>[batch_size, seq_len]</code>。每个数字对应一小段文字，比如 <code>151644</code> 可能就是 <code>&lt;|im_start|&gt;</code> 的 id。</li>
+<li><strong><code>attention_mask</code></strong>：同形状，<code>1</code> 表示有效 token，<code>0</code> 表示 padding。全为 1 说明没有 padding。</li>
+</ul>
+<h3 id="11-3-为什么要切片-output-ids-len-input-ids"><a href="#11-3-为什么要切片-output-ids-len-input-ids" class="headerlink" title="11.3 为什么要切片 output_ids[len(input_ids):]"></a>11.3 为什么要切片 <code>output_ids[len(input_ids):]</code></h3><p><code>model.generate</code> 返回的是<strong>完整序列</strong> &#x3D; 输入 token + 新生成 token。</p>
+<p>切片从”输入长度”处切到末尾，把 prompt 扔掉，只保留模型新生成的部分，否则解码出来会把你的提问再复述一遍。</p>
+<p><strong>列表推导式拆解</strong>：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">generated_ids = [</span><br><span class="line">    output_ids[<span class="built_in">len</span>(input_ids):]</span><br><span class="line">    <span class="keyword">for</span> input_ids, output_ids <span class="keyword">in</span> <span class="built_in">zip</span>(model_inputs.input_ids, outputs)</span><br><span class="line">]</span><br></pre></td></tr></table></figure>
+
+<p>等价于：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">new_generated_ids = []</span><br><span class="line"><span class="keyword">for</span> input_ids, output_ids <span class="keyword">in</span> <span class="built_in">zip</span>(model_inputs.input_ids, outputs):</span><br><span class="line">    only_new = output_ids[<span class="built_in">len</span>(input_ids):]</span><br><span class="line">    new_generated_ids.append(only_new)</span><br><span class="line">generated_ids = new_generated_ids</span><br></pre></td></tr></table></figure>
+
+<p>用数字举例：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">input_ids  = [[1, 2, 3],        [10, 20]]</span><br><span class="line">outputs    = [[1, 2, 3, 5, 6],  [10, 20, 7, 8, 9]]</span><br><span class="line">结果        = [[5, 6],           [7, 8, 9]]</span><br></pre></td></tr></table></figure>
+
+<p><code>zip(A, B)</code> 把两个可迭代对象一一配对，长度取较短的。</p>
+<h3 id="11-4-batch-decode-和-0"><a href="#11-4-batch-decode-和-0" class="headerlink" title="11.4 batch_decode 和 [0]"></a>11.4 <code>batch_decode</code> 和 <code>[0]</code></h3><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">response = tokenizer.batch_decode(generated_ids, skip_special_tokens=<span class="literal">True</span>)[<span class="number">0</span>]</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><strong><code>batch_decode</code></strong>：批量解码多组 token id，返回<strong>字符串列表</strong>（<code>decode</code> 只解单条一维数组）</li>
+<li><strong><code>skip_special_tokens=True</code></strong>：忽略 <code>&lt;|im_start|&gt;</code> 这类特殊标记，不打印出来</li>
+<li><strong><code>[0]</code></strong>：batch&#x3D;1，取第一条回答</li>
+</ul>
+<hr>
+<h2 id="🛠️-十二、两个工程杂记"><a href="#🛠️-十二、两个工程杂记" class="headerlink" title="🛠️ 十二、两个工程杂记"></a>🛠️ 十二、两个工程杂记</h2><h3 id="12-1-Python-GIL：为什么多线程跑不快-CPU-密集任务"><a href="#12-1-Python-GIL：为什么多线程跑不快-CPU-密集任务" class="headerlink" title="12.1 Python GIL：为什么多线程跑不快 CPU 密集任务"></a>12.1 Python GIL：为什么多线程跑不快 CPU 密集任务</h3><p><strong>GIL（全局解释器锁）是 CPython 的一把锁：同一时刻，一个进程内最多只有一个线程真正执行 Python 字节码。</strong></p>
+<p>想象一个房间只有一把钥匙，工人（线程）要干活必须抢到钥匙，一次只能进一个人。哪怕多核 CPU，同一进程的多个线程也无法真正并行跑 Python 代码，只能轮流交替——是<strong>并发</strong>，不是<strong>并行</strong>。</p>
+<p><strong>GIL 什么时候释放？</strong></p>
+<ol>
+<li><strong>IO 等待</strong>（最常见）：等网络、读文件时主动交出 GIL<ul>
+<li>✅ IO 密集型任务，多线程依然有效（爬虫、文件读写、接口请求）</li>
+</ul>
+</li>
+<li><strong>运行足够多字节码后</strong>：CPU 密集任务会被强制交出锁<ul>
+<li>❌ CPU 密集任务，多线程不提速甚至更慢（抢锁有开销）</li>
+</ul>
+</li>
+</ol>
+<p><strong>怎么绕开？</strong></p>
+<ol>
+<li><strong>多进程 <code>multiprocessing</code></strong>：每个进程有独立解释器和独立 GIL，可真正并行。代价是进程重、通信开销大。</li>
+<li><strong>交给 C 扩展</strong>：numpy、pandas 底层是 C，执行期间可释放 GIL，实现多核并行。</li>
+</ol>
+<div class="note info flat"><p><strong>面试一句话</strong>：GIL 是 CPython 的全局解释器锁，保证同一时刻一个进程内只有一个线程执行 Python 字节码。它让多线程无法利用多核做 CPU 密集并行；但 IO 阻塞时释放锁，IO 密集场景多线程依然有效。</p>
+</div>
+
+<h3 id="12-2-pip-的警告与依赖冲突"><a href="#12-2-pip-的警告与依赖冲突" class="headerlink" title="12.2 pip 的警告与依赖冲突"></a>12.2 pip 的警告与依赖冲突</h3><p><strong><code>Successfully installed</code> 出现了，就是装成功了。</strong> 最后的提示分两类，都不影响 import：</p>
+<ol>
+<li><strong>PATH 警告</strong>（<code>scripts not on PATH</code>）：只是命令行不能直接敲脚本命令，不影响 <code>import</code> 库。可以加 <code>--no-warn-script-location</code> 关掉提示。</li>
+<li><strong>依赖冲突</strong>（如 <code>openxlab requires rich~=13.4.2, but you have rich 15.0.0</code>）：新包升级了某个依赖，与已装的包版本不匹配。<strong>不影响新装的包本身</strong>，但那个旧包可能报错。修复方式：<code>pip install rich==13.4.2</code> 降级。</li>
+</ol>
+<p>验证：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> transformers</span><br><span class="line"><span class="built_in">print</span>(transformers.__version__)</span><br></pre></td></tr></table></figure>
+
+<p>另外提醒一个环境相关的坑：Windows 上如果 Anaconda 目录没有写权限，<code>pip install</code> 会<strong>静默</strong>把包装到用户级目录（<code>%APPDATA%\Python\...\site-packages</code>），而不是环境自己的 <code>site-packages</code>。功能上没问题，但排查”到底装哪了”时很容易被绕进去。</p>
+<hr>
+<h2 id="📌-十三、总结"><a href="#📌-十三、总结" class="headerlink" title="📌 十三、总结"></a>📌 十三、总结</h2><p>把这两章压缩成几句话：</p>
+<ol>
+<li><strong>智能体发展史是一条”问题驱动”的线</strong>：符号主义受困于知识获取瓶颈，联结主义解决了感知，强化学习解决了决策，预训练解决了知识来源，LLM 把它们整合成了现代智能体。</li>
+<li><strong>语言模型经历了 N-gram → 词嵌入 → RNN&#x2F;LSTM → Transformer 的演进</strong>，每一步都在解决上一步的硬伤：稀疏性、泛化、长依赖、并行性。</li>
+<li><strong>Transformer 的核心是自注意力</strong>：任意位置直接建联、可并行。位置编码补回顺序，交叉注意力让解码器读取编码器，残差 + LayerNorm + FFN 撑起深层网络。</li>
+<li><strong>Decoder-Only 成为主流</strong>，是因为它架构简单、任务统一、数据易得、部署方便、适合扩展。</li>
+<li><strong>模型不是数据库</strong>：它做的是概率预测，所以会幻觉、会过时。用 RAG、提示约束、外部工具和多步验证来兜底。</li>
+<li><strong>工程细节同样重要</strong>：分词决定模型怎么看世界，采样参数决定输出风格，环境配置决定你能不能跑起来。</li>
+</ol>
+<p>如果只记一句话：</p>
+<div class="note primary flat"><p><strong>理解了”每一代范式在解决什么问题、又留下了什么新问题”，就理解了今天的大模型为什么是这个样子。</strong></p>
+</div>
+
+<hr>
+<p><em>本文基于《Hello-Agents》第二、三章的学习整理，代码与实测结论均来自本地动手过程。</em></p>
+</article><div class="post-copyright"><div class="post-copyright__author"><span class="post-copyright-meta"><i class="fas fa-circle-user fa-fw"></i>文章作者: </span><span class="post-copyright-info"><a target="_blank" rel="noopener" href="https://github.com/Haoz-code">Haoz-code</a></span></div><div class="post-copyright__type"><span class="post-copyright-meta"><i class="fas fa-square-arrow-up-right fa-fw"></i>文章链接: </span><span class="post-copyright-info"><a href="https://haoz-code.github.io/2026/10/18/hello-agents-chapter2-3-notes/">https://haoz-code.github.io/2026/10/18/hello-agents-chapter2-3-notes/</a></span></div><div class="post-copyright__notice"><span class="post-copyright-meta"><i class="fas fa-circle-exclamation fa-fw"></i>版权声明: </span><span class="post-copyright-info">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明来源 <a href="https://haoz-code.github.io" target="_blank">Haoz 的博客</a>！</span></div></div><div class="tag_share"><div class="post-meta__tag-list"><a class="post-meta__tags" href="/tags/Agent/">Agent</a><a class="post-meta__tags" href="/tags/Transformer/">Transformer</a><a class="post-meta__tags" href="/tags/%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/">学习笔记</a><a class="post-meta__tags" href="/tags/%E5%A4%A7%E6%A8%A1%E5%9E%8B/">大模型</a><a class="post-meta__tags" href="/tags/Datawhale/">Datawhale</a></div><div class="post-share"><div class="social-share" data-image="https://avatars.githubusercontent.com/u/180089599?v=4" data-sites="facebook,x,wechat,weibo,qq"></div><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/css/share.min.css" media="print" onload="this.media='all'"><script src="https://cdn.jsdelivr.net/npm/butterfly-extsrc@1.1.6/sharejs/dist/js/social-share.min.js" defer></script></div></div><nav class="pagination-post" id="pagination"><a class="pagination-related full-width" href="/2026/10/15/hello-agents-chapter1-notes/" title="Hello-Agents 第一章学习笔记：亲手拆开一个 Agent 的运转闭环"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-right"><div class="info-1"><div class="info-item-1">下一篇</div><div class="info-item-2">Hello-Agents 第一章学习笔记：亲手拆开一个 Agent 的运转闭环</div></div><div class="info-2"><div class="info-item-1"> 学完 Datawhale《Hello-Agents》第一章后，我把那个”查天气 + 推景点”的旅行助手逐行拆了一遍，并实测验证了几个容易想当然的地方。这篇记录我真正卡住过的点，尤其是 Agent 循环里那个”历史到底怎么传”的问题。     一、这一章在讲什么第一章没有一上来讲理论，而是直接给你一个能跑的小 Agent：你问”北京今天去哪玩”，它自己决定先查天气、再搜景点，最后给出回答。 代码只有两百来行，但把 Agent 的四个基本部件都覆盖了：    部件 代码 职责    工具（数据获取） get_weather(city) 调天气 API，拿实时天气和气温   工具（联网搜索） get_attraction(city, weather) 用 Tavily 搜索，按”城市+天气”推景点   模型封装 OpenAICompatibleClient 封装大模型调用，可换任意 OpenAI 兼容服务   调度循环 for 循环 + 正则解析 让模型自己决定下一步调哪个工具，直到 Finish[...]   这四块组合起来，就是”能联网、能调工具、能自己决定下一步”的智能体雏形。...</div></div></div></a></nav><div class="relatedPosts"><div class="headline"><i class="fas fa-thumbs-up fa-fw"></i><span>相关推荐</span></div><div class="relatedPosts-list"><a class="pagination-related" href="/2026/10/15/hello-agents-chapter1-notes/" title="Hello-Agents 第一章学习笔记：亲手拆开一个 Agent 的运转闭环"><div class="cover" style="background: var(--default-bg-color)"></div><div class="info text-center"><div class="info-1"><div class="info-item-1"><i class="far fa-calendar-alt fa-fw"></i> 2026-10-15</div><div class="info-item-2">Hello-Agents 第一章学习笔记：亲手拆开一个 Agent 的运转闭环</div></div><div class="info-2"><div class="info-item-1"> 学完 Datawhale《Hello-Agents》第一章后，我把那个”查天气 + 推景点”的旅行助手逐行拆了一遍，并实测验证了几个容易想当然的地方。这篇记录我真正卡住过的点，尤其是 Agent 循环里那个”历史到底怎么传”的问题。     一、这一章在讲什么第一章没有一上来讲理论，而是直接给你一个能跑的小 Agent：你问”北京今天去哪玩”，它自己决定先查天气、再搜景点，最后给出回答。 代码只有两百来行，但把 Agent 的四个基本部件都覆盖了：    部件 代码 职责    工具（数据获取） get_weather(city) 调天气 API，拿实时天气和气温   工具（联网搜索） get_attraction(city, weather) 用 Tavily 搜索，按”城市+天气”推景点   模型封装 OpenAICompatibleClient 封装大模型调用，可换任意 OpenAI 兼容服务   调度循环 for 循环 + 正则解析 让模型自己决定下一步调哪个工具，直到 Finish[...]   这四块组合起来，就是”能联网、能调工具、能自己决定下一步”的智能体雏形。...</div></div></div></a></div></div><hr class="custom-hr"/><div id="post-comment"><div class="comment-head"><div class="comment-headline"><i class="fas fa-comments fa-fw"></i><span> 评论</span></div></div><div class="comment-wrap"><div><div id="giscus-wrap"></div></div></div></div></div><div class="aside-content" id="aside-content"><div class="card-widget card-info text-center"><div class="avatar-img"><img src="https://avatars.githubusercontent.com/u/180089599?v=4" onerror="this.onerror=null;this.src='/img/friend_404.gif'" alt="avatar"/></div><div class="author-info-name">Haoz-code</div><div class="author-info-description">Haoz 的个人博客</div><div class="site-data"><a href="/archives/"><div class="headline">文章</div><div class="length-num">4</div></a><a href="/tags/"><div class="headline">标签</div><div class="length-num">7</div></a><a href="/categories/"><div class="headline">分类</div><div class="length-num">2</div></a></div><a id="card-info-btn" target="_blank" rel="noopener" href="https://github.com/Haoz-code"><i class="fab fa-github"></i><span>Follow Me</span></a><div class="card-info-social-icons"><a class="social-icon" href="https://github.com/Haoz-code" target="_blank" title="Github"><i class="fab fa-github" style="color: #24292e;"></i></a></div></div><div class="card-widget card-announcement"><div class="item-headline"><i class="fas fa-bullhorn fa-shake"></i><span>公告</span></div><div class="announcement_content">欢迎来到我的博客 👋</div></div><div class="sticky_layout"><div class="card-widget" id="card-toc"><div class="item-headline"><i class="fas fa-stream"></i><span>目录</span><span class="toc-percentage"></span></div><div class="toc-content"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%F0%9F%A7%AD-%E4%B8%80%E3%80%81%E5%85%88%E7%BB%99%E4%B8%80%E6%9D%A1%E4%B8%BB%E7%BA%BF%EF%BC%9A%E8%8C%83%E5%BC%8F%E6%98%AF%E3%80%8C%E9%97%AE%E9%A2%98%E9%A9%B1%E5%8A%A8%E3%80%8D%E8%BF%AD%E4%BB%A3%E5%87%BA%E6%9D%A5%E7%9A%84"><span class="toc-text">🧭 一、先给一条主线：范式是「问题驱动」迭代出来的</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%F0%9F%8F%9B%EF%B8%8F-%E4%BA%8C%E3%80%81%E6%99%BA%E8%83%BD%E4%BD%93%E7%9A%84%E5%89%8D%E5%8F%B2%EF%BC%9A%E7%AC%A6%E5%8F%B7%E4%B8%BB%E4%B9%89%E7%9A%84%E4%B8%89%E6%AC%A1%E7%A2%B0%E5%A3%81"><span class="toc-text">🏛️ 二、智能体的前史：符号主义的三次碰壁</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1-%E7%89%A9%E7%90%86%E7%AC%A6%E5%8F%B7%E7%B3%BB%E7%BB%9F%E5%81%87%E8%AF%B4%EF%BC%9A%E6%99%BA%E8%83%BD-%E7%AC%A6%E5%8F%B7%E8%AE%A1%E7%AE%97"><span class="toc-text">2.1 物理符号系统假说：智能 &#x3D; 符号计算</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-%E4%B8%93%E5%AE%B6%E7%B3%BB%E7%BB%9F%E4%B8%8E-SHRDLU"><span class="toc-text">2.2 专家系统与 SHRDLU</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3-%E4%B8%BA%E4%BB%80%E4%B9%88%E7%AC%A6%E5%8F%B7%E4%B8%BB%E4%B9%89%E8%B5%B0%E4%B8%8D%E9%80%9A"><span class="toc-text">2.3 为什么符号主义走不通</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-4-ELIZA%EF%BC%9A%E8%A7%84%E5%88%99%E8%81%8A%E5%A4%A9%E6%9C%BA%E5%99%A8%E4%BA%BA%E7%9A%84%E5%90%AF%E7%A4%BA"><span class="toc-text">2.4 ELIZA：规则聊天机器人的启示</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-5-%E6%98%8E%E6%96%AF%E5%9F%BA%E7%9A%84%E5%BF%83%E6%99%BA%E7%A4%BE%E4%BC%9A%EF%BC%9A%E4%BB%8E%E5%8D%95%E4%BD%93%E5%88%B0%E5%8D%8F%E4%BD%9C"><span class="toc-text">2.5 明斯基的心智社会：从单体到协作</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%F0%9F%8E%93-%E4%B8%89%E3%80%81%E5%AD%A6%E4%B9%A0%E8%8C%83%E5%BC%8F%EF%BC%9A%E4%BB%8E%E3%80%8C%E8%A2%AB%E8%AE%BE%E8%AE%A1%E3%80%8D%E5%88%B0%E3%80%8C%E8%A2%AB%E8%AE%AD%E7%BB%83%E3%80%8D"><span class="toc-text">🎓 三、学习范式：从「被设计」到「被训练」</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1-%E8%81%94%E7%BB%93%E4%B8%BB%E4%B9%89%EF%BC%9A%E7%9F%A5%E8%AF%86%E5%AD%98%E5%9C%A8%E6%9D%83%E9%87%8D%E9%87%8C"><span class="toc-text">3.1 联结主义：知识存在权重里</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2-%E5%BC%BA%E5%8C%96%E5%AD%A6%E4%B9%A0%EF%BC%9A%E5%9C%A8%E8%AF%95%E9%94%99%E4%B8%AD%E5%AD%A6%E4%BC%9A%E5%86%B3%E7%AD%96"><span class="toc-text">3.2 强化学习：在试错中学会决策</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3-%E9%A2%84%E8%AE%AD%E7%BB%83%EF%BC%9A%E8%A7%A3%E5%86%B3%E7%9F%A5%E8%AF%86%E8%8E%B7%E5%8F%96%E7%93%B6%E9%A2%88"><span class="toc-text">3.3 预训练：解决知识获取瓶颈</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4-LLM-%E9%A9%B1%E5%8A%A8%E7%9A%84%E7%8E%B0%E4%BB%A3%E6%99%BA%E8%83%BD%E4%BD%93%EF%BC%9A%E6%84%9F%E7%9F%A5-%E2%86%92-%E6%80%9D%E8%80%83-%E2%86%92-%E8%A1%8C%E5%8A%A8-%E2%86%92-%E8%A7%82%E5%AF%9F"><span class="toc-text">3.4 LLM 驱动的现代智能体：感知 → 思考 → 行动 → 观察</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%F0%9F%93%88-%E5%9B%9B%E3%80%81%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E7%9A%84%E4%B8%89%E7%BA%A7%E8%B7%B3%EF%BC%9AN-gram-%E2%86%92-%E8%AF%8D%E5%B5%8C%E5%85%A5-%E2%86%92-RNN"><span class="toc-text">📈 四、语言模型的三级跳：N-gram → 词嵌入 → RNN</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-N-gram%EF%BC%9A%E7%94%A8%E9%A9%AC%E5%B0%94%E5%8F%AF%E5%A4%AB%E5%81%87%E8%AE%BE%E5%81%9A%E8%AE%A1%E6%95%B0"><span class="toc-text">4.1 N-gram：用马尔可夫假设做计数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2-%E8%AF%8D%E5%B5%8C%E5%85%A5%EF%BC%9Aking-%E2%88%92-man-woman-%E2%89%88-queen"><span class="toc-text">4.2 词嵌入：king − man + woman ≈ queen</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-RNN-LSTM%EF%BC%9A%E7%BB%99%E7%BD%91%E7%BB%9C%E5%8A%A0%E4%B8%8A%E8%AE%B0%E5%BF%86"><span class="toc-text">4.3 RNN&#x2F;LSTM：给网络加上记忆</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%F0%9F%8F%97%EF%B8%8F-%E4%BA%94%E3%80%81Transformer-%E6%9E%B6%E6%9E%84%E6%8B%86%E8%A7%A3"><span class="toc-text">🏗️ 五、Transformer 架构拆解</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1-%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%EF%BC%9A%E7%BC%96%E7%A0%81%E5%99%A8-%E8%A7%A3%E7%A0%81%E5%99%A8"><span class="toc-text">5.1 整体结构：编码器 + 解码器</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2-%E4%BD%8D%E7%BD%AE%E7%BC%96%E7%A0%81%EF%BC%9Ai-%E5%88%B0%E5%BA%95%E6%98%AF%E4%BB%80%E4%B9%88"><span class="toc-text">5.2 位置编码：i 到底是什么</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3-register-buffer%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BD%8D%E7%BD%AE%E7%BC%96%E7%A0%81%E4%B8%8D%E5%8F%82%E4%B8%8E%E8%AE%AD%E7%BB%83"><span class="toc-text">5.3 register_buffer：为什么位置编码不参与训练</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-4-%E4%BD%8D%E7%BD%AE%E7%BC%96%E7%A0%81%E4%B9%8B%E5%90%8E%E4%B8%BA%E4%BB%80%E4%B9%88%E5%8A%A0-Dropout"><span class="toc-text">5.4 位置编码之后为什么加 Dropout</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-5-%E8%87%AA%E6%B3%A8%E6%84%8F%E5%8A%9B-vs-%E4%BA%A4%E5%8F%89%E6%B3%A8%E6%84%8F%E5%8A%9B"><span class="toc-text">5.5 自注意力 vs 交叉注意力</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-6-%E5%89%A9%E4%B8%8B%E7%9A%84%E6%8B%BC%E5%9B%BE"><span class="toc-text">5.6 剩下的拼图</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%F0%9F%8F%86-%E5%85%AD%E3%80%81Decoder-Only%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88%E5%AE%83%E8%B5%A2%E4%BA%86"><span class="toc-text">🏆 六、Decoder-Only：为什么它赢了</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1-%E4%B8%A4%E7%A7%8D%E6%9E%B6%E6%9E%84%E7%9A%84%E6%AF%94%E5%96%BB"><span class="toc-text">6.1 两种架构的比喻</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2-%E5%AF%B9%E6%AF%94"><span class="toc-text">6.2 对比</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-3-%E4%B8%BA%E4%BB%80%E4%B9%88%E4%B8%BB%E6%B5%81%E5%A4%A7%E6%A8%A1%E5%9E%8B%E9%80%89-Decoder-Only"><span class="toc-text">6.3 为什么主流大模型选 Decoder-Only</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E2%9C%82%EF%B8%8F-%E4%B8%83%E3%80%81%E5%88%86%E8%AF%8D%EF%BC%9ABPE-%E5%A6%82%E4%BD%95%E6%8A%8A%E6%96%87%E5%AD%97%E5%88%87%E6%88%90-token"><span class="toc-text">✂️ 七、分词：BPE 如何把文字切成 token</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#7-1-%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%E5%88%86%E8%AF%8D"><span class="toc-text">7.1 为什么需要分词</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-2-%E6%A0%B8%E5%BF%83%E6%80%9D%E6%83%B3"><span class="toc-text">7.2 核心思想</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-3-%E9%80%90%E8%A1%8C%E6%8B%86%E8%A7%A3%E5%AE%9E%E7%8E%B0"><span class="toc-text">7.3 逐行拆解实现</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#7-4-%E5%92%8C%E6%96%AD%E8%A8%80%E7%9A%84%E4%BD%9C%E7%94%A8"><span class="toc-text">7.4 &lt;&#x2F;w&gt; 和断言的作用</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%F0%9F%92%AC-%E5%85%AB%E3%80%81%E6%8F%90%E7%A4%BA%E5%B7%A5%E7%A8%8B%EF%BC%9A%E6%80%8E%E4%B9%88%E5%92%8C%E6%A8%A1%E5%9E%8B%E3%80%8C%E8%AF%B4%E8%AF%9D%E3%80%8D"><span class="toc-text">💬 八、提示工程：怎么和模型「说话」</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#8-1-%E9%87%87%E6%A0%B7%E5%8F%82%E6%95%B0%EF%BC%9ATemperature-Top-k-Top-p"><span class="toc-text">8.1 采样参数：Temperature &#x2F; Top-k &#x2F; Top-p</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#8-2-Zero-shot-Few-shot-CoT"><span class="toc-text">8.2 Zero-shot &#x2F; Few-shot &#x2F; CoT</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E2%9A%96%EF%B8%8F-%E4%B9%9D%E3%80%81%E6%A8%A1%E5%9E%8B%E6%80%8E%E4%B9%88%E9%80%89"><span class="toc-text">⚖️ 九、模型怎么选</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%F0%9F%93%8A-%E5%8D%81%E3%80%81%E7%BC%A9%E6%94%BE%E6%B3%95%E5%88%99%E4%B8%8E%E5%9B%BA%E6%9C%89%E5%B1%80%E9%99%90"><span class="toc-text">📊 十、缩放法则与固有局限</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#10-1-Scaling-Laws-%E4%B8%8E-Chinchilla"><span class="toc-text">10.1 Scaling Laws 与 Chinchilla</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-2-%E6%B6%8C%E7%8E%B0%E8%83%BD%E5%8A%9B"><span class="toc-text">10.2 涌现能力</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#10-3-%E5%B9%BB%E8%A7%89%EF%BC%9A%E6%A8%A1%E5%9E%8B%E4%B8%BA%E4%BB%80%E4%B9%88%E4%BC%9A%E4%B8%80%E6%9C%AC%E6%AD%A3%E7%BB%8F%E5%9C%B0%E8%83%A1%E8%AF%B4"><span class="toc-text">10.3 幻觉：模型为什么会一本正经地胡说</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%F0%9F%94%A7-%E5%8D%81%E4%B8%80%E3%80%81%E5%AE%9E%E6%93%8D%EF%BC%9AHuggingFace-%E5%AF%B9%E8%AF%9D%E7%94%9F%E6%88%90%E5%85%A8%E6%B5%81%E7%A8%8B"><span class="toc-text">🔧 十一、实操：HuggingFace 对话生成全流程</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#11-1-apply-chat-template-%E5%9C%A8%E5%81%9A%E4%BB%80%E4%B9%88"><span class="toc-text">11.1 apply_chat_template 在做什么</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-2-model-inputs-%E6%98%AF%E4%BB%80%E4%B9%88"><span class="toc-text">11.2 model_inputs 是什么</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-3-%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E5%88%87%E7%89%87-output-ids-len-input-ids"><span class="toc-text">11.3 为什么要切片 output_ids[len(input_ids):]</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#11-4-batch-decode-%E5%92%8C-0"><span class="toc-text">11.4 batch_decode 和 [0]</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%F0%9F%9B%A0%EF%B8%8F-%E5%8D%81%E4%BA%8C%E3%80%81%E4%B8%A4%E4%B8%AA%E5%B7%A5%E7%A8%8B%E6%9D%82%E8%AE%B0"><span class="toc-text">🛠️ 十二、两个工程杂记</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#12-1-Python-GIL%EF%BC%9A%E4%B8%BA%E4%BB%80%E4%B9%88%E5%A4%9A%E7%BA%BF%E7%A8%8B%E8%B7%91%E4%B8%8D%E5%BF%AB-CPU-%E5%AF%86%E9%9B%86%E4%BB%BB%E5%8A%A1"><span class="toc-text">12.1 Python GIL：为什么多线程跑不快 CPU 密集任务</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#12-2-pip-%E7%9A%84%E8%AD%A6%E5%91%8A%E4%B8%8E%E4%BE%9D%E8%B5%96%E5%86%B2%E7%AA%81"><span class="toc-text">12.2 pip 的警告与依赖冲突</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%F0%9F%93%8C-%E5%8D%81%E4%B8%89%E3%80%81%E6%80%BB%E7%BB%93"><span class="toc-text">📌 十三、总结</span></a></li></ol></div></div><div class="card-widget card-recent-post"><div class="item-headline"><i class="fas fa-history"></i><span>最新文章</span></div><div class="aside-list"><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/10/18/hello-agents-chapter2-3-notes/" title="Hello-Agents 第二、三章学习笔记：从符号主义到 Decoder-Only">Hello-Agents 第二、三章学习笔记：从符号主义到 Decoder-Only</a><time datetime="2026-10-17T18:33:00.000Z" title="发表于 2026-10-18 02:33:00">2026-10-18</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/10/15/hello-agents-chapter1-notes/" title="Hello-Agents 第一章学习笔记：亲手拆开一个 Agent 的运转闭环">Hello-Agents 第一章学习笔记：亲手拆开一个 Agent 的运转闭环</a><time datetime="2026-10-15T11:50:00.000Z" title="发表于 2026-10-15 19:50:00">2026-10-15</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/10/14/first-post/" title="第一篇，随便聊聊">第一篇，随便聊聊</a><time datetime="2026-10-14T08:45:00.000Z" title="发表于 2026-10-14 16:45:00">2026-10-14</time></div></div><div class="aside-list-item no-cover"><div class="content"><a class="title" href="/2026/10/13/hello-world/" title="Hello World">Hello World</a><time datetime="2026-10-13T12:33:17.025Z" title="发表于 2026-10-13 20:33:17">2026-10-13</time></div></div></div></div></div></div></main><footer id="footer"><div class="footer-other"><div class="footer-copyright"><span class="copyright">&copy;&nbsp;2025 - 2026 By Haoz-code</span><span class="framework-info"><span>框架 </span><a target="_blank" rel="noopener" href="https://hexo.io">Hexo 8.1.2</a><span class="footer-separator">|</span><span>主题 </span><a target="_blank" rel="noopener" href="https://github.com/jerryc127/hexo-theme-butterfly">Butterfly 5.7.1.260810</a></span></div></div></footer></div><div id="rightside"><div id="rightside-config-hide"><button id="readmode" type="button" title="阅读模式"><i class="fas fa-book-open"></i></button><button id="darkmode" type="button" title="日间和夜间模式切换"><i class="fas fa-adjust"></i></button><button id="hide-aside-btn" type="button" title="单栏和双栏切换"><i class="fas fa-arrows-alt-h"></i></button></div><div id="rightside-config-show"><button id="rightside-config" type="button" title="设置"><i class="fas fa-cog fa-spin"></i></button><button class="close" id="mobile-toc-button" type="button" title="目录"><i class="fas fa-list-ul"></i></button><a id="to_comment" href="#post-comment" title="前往评论"><i class="fas fa-comments"></i></a><button id="go-up" type="button" title="回到顶部"><span class="scroll-percent"></span><i class="fas fa-arrow-up"></i></button></div></div><div><script src="/js/utils.js?v=5.7.1.260810"></script><script src="/js/main.js?v=5.7.1.260810"></script><div class="js-pjax"><script>(() => {
+  const changeScriptToMath = article => {
+    article.querySelectorAll('script[type^="math/tex"]').forEach(el => {
+      const display = /mode=display/.test(el.type)
+      const node = document.createElement(display ? 'div' : 'span')
+      node.textContent = display
+        ? `$$${el.textContent}$$`
+        : `$${el.textContent}$`
+      el.parentNode.replaceChild(node, el)
+    })
+  }
+
+  const loadMathjax = () => {
+    const article = document.getElementById('article-container')
+    if (!article || article.querySelector('.hbe-container')) return
+    changeScriptToMath(article)
+
+    if (!window.MathJax) {
+      window.MathJax = {
+        loader: {
+          load: [
+            // Four font extension packages (optional)
+            //- '[tex]/bbm',
+            //- '[tex]/bboldx',
+            //- '[tex]/dsfont',
+            '[tex]/mhchem',
+            'ui/lazy'
+          ],
+          paths: {
+            'mathjax-newcm': '[mathjax]/../@mathjax/mathjax-newcm-font',
+
+            //- // Four font extension packages (optional)
+            //- 'mathjax-bbm-extension': '[mathjax]/../@mathjax/mathjax-bbm-font-extension',
+            //- 'mathjax-bboldx-extension': '[mathjax]/../@mathjax/mathjax-bboldx-font-extension',
+            //- 'mathjax-dsfont-extension': '[mathjax]/../@mathjax/mathjax-dsfont-font-extension',
+            'mathjax-mhchem-extension': '[mathjax]/../@mathjax/mathjax-mhchem-font-extension'
+          }
+        },
+        output: {
+          font: 'mathjax-newcm',
+        },
+        tex: {
+          inlineMath: [['$', '$'], ['\\(', '\\)']],
+          tags: 'none',
+          packages: {
+            '[+]': [
+              'mhchem'
+            ]
+          }
+        },
+        chtml: {
+          scale: 1.1
+        },
+        options: {
+          lazyMargin: '200px',
+          enableMenu: true,
+          menuOptions: {
+            settings: {
+              enrich: false  // Turn off Braille and voice narration text automatic generation
+            }
+          },
+        }
+      }
+
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@4.1.3/tex-mml-chtml.min.js'
+      script.id = 'MathJax-script'
+      script.async = true
+      document.head.appendChild(script)
+    } else {
+      MathJax.typesetClear()
+      MathJax.typesetPromise([ article ])
+    }
+  }
+
+  btf.addGlobalFn('encrypt', loadMathjax, 'mathjax')
+  if (window.pjax) loadMathjax()
+  else if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadMathjax)
+  else loadMathjax()
+})()</script><script>(() => {
+  const isShuoshuo = GLOBAL_CONFIG_SITE.pageType === 'shuoshuo'
+  const option = {"data-lang":"zh-CN","data-category":"Announcements"}
+
+  const getGiscusTheme = theme => theme === 'dark' ? 'dark' : 'light'
+
+  const createScriptElement = config => {
+    const ele = document.createElement('script')
+    Object.entries(config).forEach(([key, value]) => {
+      ele.setAttribute(key, value)
+    })
+    return ele
+  }
+
+  const loadGiscus = (el = document, key) => {
+    const mappingConfig = isShuoshuo
+      ? { 'data-mapping': 'specific', 'data-term': key }
+      : { 'data-mapping': (option && option['data-mapping']) || 'pathname' }
+
+    const giscusConfig = {
+      src: 'https://giscus.app/client.js',
+      'data-repo': 'Haoz-code/haoz-code.github.io',
+      'data-repo-id': 'R_kgDOVHbOlw',
+      'data-category-id': 'DIC_kwDOVHbOl84DIVIQ',
+      'data-theme': getGiscusTheme(document.documentElement.getAttribute('data-theme')),
+      'data-reactions-enabled': '1',
+      crossorigin: 'anonymous',
+      async: true,
+      ...option,
+      ...mappingConfig
+    }
+
+    const scriptElement = createScriptElement(giscusConfig)
+
+    el.querySelector('#giscus-wrap').appendChild(scriptElement)
+
+    if (isShuoshuo) {
+      window.shuoshuoComment.destroyGiscus = () => {
+        if (el.children.length) {
+          el.innerHTML = ''
+          el.classList.add('no-comment')
+        }
+      }
+    }
+  }
+
+  const changeGiscusTheme = theme => {
+    const iframe = document.querySelector('#giscus-wrap iframe')
+    if (iframe) {
+      const message = {
+        giscus: {
+          setConfig: {
+            theme: getGiscusTheme(theme)
+          }
+        }
+      }
+      iframe.contentWindow.postMessage(message, 'https://giscus.app')
+    }
+  }
+
+  btf.addGlobalFn('themeChange', changeGiscusTheme, 'giscus')
+
+  if (isShuoshuo) {
+    'Giscus' === 'Giscus'
+      ? window.shuoshuoComment = { loadComment: loadGiscus }
+      : window.loadOtherComment = loadGiscus
+    return
+  }
+
+  if ('Giscus' === 'Giscus' || !false) {
+    if (false) btf.loadComment(document.getElementById('giscus-wrap'), loadGiscus)
+    else loadGiscus()
+  } else {
+    window.loadOtherComment = loadGiscus
+  }
+})()</script></div><script async data-pjax src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script><div id="local-search"><div class="search-dialog"><nav class="search-nav"><span class="search-dialog-title">搜索</span><i class="fas fa-spinner fa-pulse" id="loading-status" hidden="hidden"></i><button class="search-close-button"><i class="fas fa-times"></i></button></nav><div class="text-center" id="loading-database"><i class="fas fa-spinner fa-pulse"></i><span>  数据加载中</span></div><div class="local-search-input"><input placeholder="搜索" type="text"/></div><hr/><div id="local-search-results"></div><div class="ais-Pagination" id="local-search-pagination" style="display:none;"><ul class="ais-Pagination-list"></ul></div><div id="local-search-stats"></div></div><div id="search-mask"></div><script src="/js/search/local-search.js?v=5.7.1.260810"></script></div></div></body></html>
